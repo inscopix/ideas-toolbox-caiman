@@ -1,0 +1,203 @@
+[
+    {
+        "key": "caiman_output",
+        "analysis_table_result_column_name": "CaImAn Output",
+        "file_type": "caiman_data",
+        "file_format": "hdf5",
+        "file_structure": "unknown",
+        "file_category": "result",
+        "help": "Caiman output",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "cellset_raw",
+        "analysis_table_result_column_name": "Raw Cell Set(s)",
+        "file_type": "cell_set",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Raw cell set(s)",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "cellset_denoised",
+        "analysis_table_result_column_name": "Denoised Cell Set(s)",
+        "file_type": "cell_set",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Denoised cell set(s)",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "neural_events",
+        "analysis_table_result_column_name": "Neural Events",
+        "file_type": "neural_events",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Neural events",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "correlation_image",
+        "analysis_table_result_column_name": "Correlation Image",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Correlation image",
+        "required": true,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "caiman_output"
+        ]
+    },
+    {
+        "key": "pnr_image",
+        "analysis_table_result_column_name": "Peak-to-Noise Image",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Peak-to-noise image",
+        "required": true,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "caiman_output"
+        ]
+    },
+    {
+        "key": "preview_neural_events",
+        "analysis_table_result_column_name": "Neural Events Preview",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Neural events",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "neural_events"
+        ]
+    },
+        {
+        "key": "traces_cellset_raw",
+        "analysis_table_result_column_name": "Cellset Raw Traces",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Raw temporal activity of individual cells",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "cellset_raw"
+        ]
+    },
+    {
+        "key": "traces_cellset_denoised",
+        "analysis_table_result_column_name": "Cellset Denoised Traces",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Denoised temporal activity of individual cells",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "cellset_denoised"
+        ]
+    },
+    {
+        "key": "footprints_cellset_raw",
+        "analysis_table_result_column_name": "Cellset Raw Footprints",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Spatial footprints of individual cells",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "cellset_raw"
+        ]
+    },
+    {
+        "key": "footprints_cellset_denoised",
+        "analysis_table_result_column_name": "Cellset Denoised Footprints",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Spatial footprints of individual cells",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "cellset_denoised"
+        ]
+    }
+]

@@ -1,0 +1,44 @@
+{
+    "data": {
+		"fr": 30,
+		"dxy": 2.0
+	},
+    "init": {
+		"K": 4,
+		"gSig": [4, 4],
+		"gSiz": [9, 9],
+		"method_init": "greedy_roi",
+		"tsub": 1,
+		"center_psf": false,
+		"normalize_init": true,
+		"nb": 2
+	},
+    "motion": {
+		"pw_rigid": true,
+		"max_shifts": [6, 6],
+		"gSig_filt": null
+	},
+    "patch": {
+		"nb_patch": 1,
+		"rf": 15,
+		"stride": 10,
+		"only_init": true,
+		"low_rank_background": true,
+		"del_duplicates": false
+	},
+	"temporal": {
+		"bas_nonneg": true,
+		"nb": 2
+	},
+	"spatial": {
+		"nb": 2
+	},
+    "merging": {
+		"merge_thr": 0.85
+    },
+    "quality": {
+		"min_SNR": 2.0,
+		"use_cnn": true,
+		"min_cnn_thr": 0.99
+	}
+}
