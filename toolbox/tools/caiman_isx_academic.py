@@ -41,7 +41,7 @@ def caiman_workflow(
     # Motion Correction
     motion_correct: bool = True,
     pw_rigid: bool = False,
-    gSig_filt: Optional[int] = 3,
+    gSig_filt: Optional[int] = None,
     max_shifts: int = 5,
     strides: int = 48,
     overlaps: int = 24,

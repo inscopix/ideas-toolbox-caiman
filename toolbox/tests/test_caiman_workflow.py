@@ -155,7 +155,7 @@ def test_caiman_cnmfe_workflow_single_1p_tif_movie_params_from_default_user_spec
     """Verify that the CaImAn CNMF-E workflow can be applied to a 1P tif movie using parameters specified by the user or default."""
     input_movie_files = [os.path.join(DATA_DIR, "data_endoscope.tif")]
 
-    caiman_workflow(input_movie_files=input_movie_files, fr=10)
+    caiman_workflow(input_movie_files=input_movie_files, fr=10, gSig_filt=3)
 
     # validate existence of output files
     output_dir = os.getcwd()
@@ -275,6 +275,7 @@ def test_caiman_cnmfe_workflow_single_isxd_file():
         overwrite_analysis_table_params=False,
         min_corr=0.5,
         min_pnr=5,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -379,6 +380,7 @@ def test_caiman_cnmfe_workflow_isxd_movie_series():
         overwrite_analysis_table_params=False,
         min_corr=0.5,
         min_pnr=5,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -543,6 +545,7 @@ def test_caiman_cnmfe_workflow_single_tiff_file():
         min_corr=0.5,
         min_pnr=5,
         fr=10,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -642,6 +645,7 @@ def test_caiman_cnmfe_workflow_tiff_movie_series():
         min_corr=0.5,
         min_pnr=5,
         fr=10,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -1010,7 +1014,10 @@ def test_caiman_cnmfe_workflow_single_avi_movie():
     input_movie_files = [os.path.join(DATA_DIR, "movie_part1_108x122x200.avi")]
 
     caiman_workflow(
-        input_movie_files=input_movie_files, min_corr=0.6, min_pnr=7
+        input_movie_files=input_movie_files,
+        min_corr=0.6,
+        min_pnr=7,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -1112,7 +1119,10 @@ def test_caiman_cnmfe_workflow_avi_movie_series():
     ]
 
     caiman_workflow(
-        input_movie_files=input_movie_files, min_corr=0.6, min_pnr=7
+        input_movie_files=input_movie_files,
+        min_corr=0.6,
+        min_pnr=7,
+        gSig_filt=3,
     )
 
     # validate existence of output files
@@ -1245,3 +1255,52 @@ def test_caiman_cnmfe_workflow_avi_movie_series():
     assert eventset1.get_cell_name(0) == exp_cell0_name
     assert eventset1.get_cell_name(3) == exp_cell3_name
     assert exp_timing1 == eventset1.timing
+
+
+def test_caiman_cnmf_workflow_on_2p_data_with_minimal_params():
+    """Verify that the CaImAn CNMF workflow correctly processes 2P data with minimal 2P parameters specified."""
+    input_movie_files = [os.path.join(DATA_DIR, "demoMovie.tif")]
+
+    caiman_workflow(
+        input_movie_files=input_movie_files,
+        fr=30,
+        dxy=2.0,
+        K=4,
+        gSig=4,
+        gSiz=9,
+        method_init="greedy_roi",
+        tsub=1,
+        center_psf=False,
+        normalize_init=True,
+        nb=2,
+        max_shifts=6,
+        nb_patch=1,
+        rf=15,
+        stride=10,
+        low_rank_background=True,
+        del_duplicates=False,
+    )
+
+    # validate existence of output files
+    output_dir = os.getcwd()
+    act_output_files = os.listdir(output_dir)
+    for f in [
+        # caiman output
+        "caiman_output.hdf5",
+        "correlation_image.png",
+        "pnr_image.png",
+        # raw cell set
+        "cellset_raw.000.isxd",
+        "traces_cellset_raw.000.png",
+        "footprints_cellset_raw.000.png",
+        # denoised cell set
+        "cellset_denoised.000.isxd",
+        "traces_cellset_denoised.000.png",
+        "footprints_cellset_denoised.000.png",
+        # neural events
+        "neural_events.000.isxd",
+        "preview_neural_events.000.png",
+        # metadata
+        "output_metadata.json",
+    ]:
+        assert f in act_output_files
