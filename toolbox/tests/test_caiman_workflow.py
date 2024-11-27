@@ -66,8 +66,7 @@ def test_caiman_cnmfe_workflow_single_1p_tif_movie_params_from_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -163,8 +162,7 @@ def test_caiman_cnmfe_workflow_single_1p_tif_movie_params_from_default_user_spec
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -284,8 +282,7 @@ def test_caiman_cnmfe_workflow_single_isxd_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -389,8 +386,7 @@ def test_caiman_cnmfe_workflow_isxd_movie_series():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -554,8 +550,7 @@ def test_caiman_cnmfe_workflow_single_tiff_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -654,8 +649,7 @@ def test_caiman_cnmfe_workflow_tiff_movie_series():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -818,8 +812,7 @@ def test_caiman_cnmf_workflow_single_2p_tif_movie_params_from_default_user_speci
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -923,8 +916,7 @@ def test_caiman_cnmf_workflow_single_2p_tif_movie_params_from_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -1026,8 +1018,7 @@ def test_caiman_cnmfe_workflow_single_avi_movie():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -1131,8 +1122,7 @@ def test_caiman_cnmfe_workflow_avi_movie_series():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",
@@ -1287,8 +1277,7 @@ def test_caiman_cnmf_workflow_on_2p_data_with_minimal_params():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "correlation_image.png",
-        "pnr_image.png",
+        "initialization_images.png",
         # raw cell set
         "cellset_raw.000.isxd",
         "traces_cellset_raw.000.png",

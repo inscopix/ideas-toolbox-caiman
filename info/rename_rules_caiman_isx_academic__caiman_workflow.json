@@ -28,19 +28,12 @@
             ],
             "custom_string": "neural_events"
         },
-        "correlation_image": {
+        "initialization_images": {
             "pattern": [
                 "input_movie_files",
                 "custom_string"
             ],
-            "custom_string": "correlation_image"
-        },
-        "pnr_image": {
-            "pattern": [
-                "input_movie_files",
-                "custom_string"
-            ],
-            "custom_string": "pnr_image"
+            "custom_string": "initialization_images"
         },
         "preview_neural_events": {
             "pattern": [
@@ -76,6 +69,20 @@
                 "custom_string"
             ],
             "custom_string": "denoised_cell_set_footprints"
+        },
+        "traces_global_cellset": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "caiman_output_traces"
+        },
+        "footprints_global_cellset": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "caiman_output_footprints"
         }
     }
 }

@@ -11,17 +11,15 @@ import ast
 import cv2
 import psutil
 from matplotlib.image import imsave
-
 import caiman as cm
 from caiman.source_extraction.cnmf import params as params
 from caiman.motion_correction import MotionCorrect
 from caiman.source_extraction import cnmf
-
 from toolbox.utils.exceptions import IdeasError
 from toolbox.utils.utilities import movie_series
 from toolbox.utils.utilities import get_file_size
-
 from toolbox.utils.data_conversion import convert_caiman_output_to_isxd
+from toolbox.utils.previews import generate_initialization_images_preview
 
 import logging
 
@@ -396,38 +394,8 @@ def caiman_workflow(
         # just on the spatial estimates from the previous step
         model = model.refit(images, dview=cluster)
 
-    # generate correlation and pnr images
-    try:
-        logger.info("Generating summary images")
-        correlation_image, pnr_image = cm.summary_images.correlation_pnr(
-            images[:: max(num_frames // 1000, 1)], gSig=3, swap_dim=False
-        )
-
-        correlation_image_filename = os.path.join(
-            output_dir, "correlation_image.png"
-        )
-        imsave(
-            fname=correlation_image_filename,
-            arr=correlation_image,
-            cmap="viridis",
-        )
-        logger.info(
-            f"Correlation image saved "
-            f"({os.path.basename(correlation_image_filename)}, "
-            f"size: {get_file_size(correlation_image_filename)})"
-        )
-
-        pnr_image_filename = os.path.join(output_dir, "pnr_image.png")
-        imsave(fname=pnr_image_filename, arr=pnr_image, cmap="viridis")
-        logger.info(
-            f"Peak-to-noise image saved "
-            f"({os.path.basename(pnr_image_filename)}, "
-            f"size: {get_file_size(pnr_image_filename)})"
-        )
-    except Exception as e:
-        logger.warning(
-            f"Correlation and PNR images could not be generated: {str(e)}"
-        )
+    # generate caiman preview, which includes the search images
+    correlation_image = generate_initialization_images_preview(images=images)
 
     # perform automated component evaluation
     model.estimates.evaluate_components(images, model.params, dview=cluster)

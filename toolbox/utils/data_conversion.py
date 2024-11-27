@@ -212,12 +212,40 @@ def convert_caiman_output_to_isxd(
             f"size: {get_file_size(eventset_filename)})"
         )
 
+    # convert caiman output to a single isxd file
+    # that will be used to generate the overall caiman output preview
+    global_cellset_filename = "global_cellset.isxd"
+    global_timing_info = isx.Timing(
+        num_samples=sum(num_frames_per_movie), period=timing_info[0].period
+    )
+    global_spacing_info = spacing_info[0]
+    global_cellset = isx.CellSet.write(
+        global_cellset_filename, global_timing_info, global_spacing_info
+    )
+    for cell_index in range(num_cells):
+        footprint = np.flipud(np.rot90(footprints[cell_index]))
+        raw_trace = np.array(
+            model.estimates.C[cell_index], dtype=np.float32
+        ) + np.array(
+            model.estimates.YrA[cell_index],
+            dtype=np.float32,
+        )
+        global_cellset.set_cell_data(
+            index=cell_index,
+            image=footprint,
+            trace=raw_trace,
+            name=cell_names[cell_index],
+        )
+    global_cellset.flush()
+
     # update cell statuses
     cell_statuses = np.array(["accepted" for _ in range(num_cells)])
     cell_statuses[model.estimates.idx_components_bad] = "rejected"
     write_cell_statuses(
         cell_statuses=cell_statuses,
-        cell_set_filenames=cellset_raw_filenames + cellset_denoised_filenames,
+        cell_set_filenames=cellset_raw_filenames
+        + cellset_denoised_filenames
+        + [global_cellset_filename],
     )
 
     # generate previews
@@ -227,6 +255,7 @@ def convert_caiman_output_to_isxd(
         cellset_denoised_filenames=cellset_denoised_filenames,
         eventset_filenames=eventset_filenames,
         original_input_indices=original_input_movie_indices,
+        global_cellset_filename=global_cellset_filename,
     )
 
     # generate metadata

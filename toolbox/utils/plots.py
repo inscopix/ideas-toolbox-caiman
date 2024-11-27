@@ -563,6 +563,7 @@ def save_neural_traces_preview(
     *,
     cell_set_file: str,
     output_preview_filename: str,
+    vertical_line_indices: list[int] = None,
 ) -> None:
     """Save a preview of the input neural traces to a PNG file
 
@@ -627,6 +628,12 @@ def save_neural_traces_preview(
     ax.yaxis.label.set_color("gray")
     for spine in ["bottom", "top", "left", "right"]:
         ax.spines[spine].set_color("gray")
+
+    # draw vertical dotted lines to separate the timeline into individual series items
+    if vertical_line_indices is not None:
+        for x in vertical_line_indices:
+            plt.axvline(x=time[x], color="gray", ls="--", lw=1, alpha=0.3)
+
     plt.tight_layout()
 
     logger.info("Saving traces figure...")
