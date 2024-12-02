@@ -28,9 +28,9 @@ RUN apt update && apt upgrade -y \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
     && apt install -y gcc python3-dev \
-    && apt install -y python3.10 python3.10-dev python3-pip python3.10-distutils git curl libgl1 \
+    && apt install -y python3.10 python3.10-dev python3-pip python3.10-distutils git curl libgl1 ffmpeg \
     && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 \
-    && python3.10 -m pip install --no-cache-dir awscli boto3 click requests Cython
+    && python3.10 -m pip install --no-cache-dir awscli==1.35.17 boto3==1.35.17 click requests Cython
 
 # Link python to specific version
 RUN ln -s /usr/bin/python3.10 /usr/bin/python

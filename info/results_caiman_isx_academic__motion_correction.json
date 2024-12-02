@@ -1,0 +1,93 @@
+[
+    {
+        "key": "mc_movie",
+        "analysis_table_result_column_name": "Motion-Corrected Movie(s)",
+        "file_type": "miniscope_movie",
+        "file_format": ["isxd", "tiff", "tif", "avi"],
+        "file_structure": "movie",
+        "file_category": "result",
+        "help": "Motion-corrected movie",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "preview_mc_movie",
+        "analysis_table_result_column_name": "Motion-Corrected Movie Preview",
+        "file_type": "",
+        "file_format": "mp4",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Motion-corrected movie preview",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "mc_movie"
+        ]
+    },
+    {
+        "key": "mc_qc_data",
+        "analysis_table_result_column_name": "Motion Correction Quality Assessment",
+        "file_type": "motion_correction_qc_data",
+        "file_format": "csv",
+        "file_structure": "table",
+        "file_category": "result",
+        "help": "Motion correction quality assessment data",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "preview_rigid_shifts",
+        "analysis_table_result_column_name": "Rigid Shifts Preview",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Rigid shifts of the entire field of view detected by NorMCorre along the x-axis (top, blue) and y-axis (bottom, orange).",
+        "required": true,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "mc_qc_data"
+        ]
+    },
+    {
+        "key": "preview_piecewise_rigid_shifts",
+        "analysis_table_result_column_name": "Piecewise Rigid Shifts Preview",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Piecewise rigid shifts detected by NorMCorre along the x-axis (top) and y-axis (bottom). Each color represents the shifts within a given patch of the field of view.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "mc_qc_data"
+        ]
+    }
+]

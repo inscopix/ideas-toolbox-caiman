@@ -23,7 +23,7 @@
             "name": "CaImAn Cell Extraction Workflow",
             "key": "caiman_isx_academic__caiman_workflow",
             "help": "The CaImAn cell identification workflow performs motion correction using the NorMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.",
-            "version": "0.3.0",
+            "version": "0.5.0",
             "maturity": "production",
             "visibility": "private",
             "toolkit": "Calcium Imaging Processing",
@@ -71,31 +71,6 @@
                                 "file_type": "movie",
                                 "file_structure": "movie",
                                 "file_format": "avi"
-                            },
-                            {
-                                "file_type": "unknown",
-                                "file_structure": "unknown",
-                                "file_format": "npy"
-                            },
-                            {
-                                "file_type": "unknown",
-                                "file_structure": "unknown",
-                                "file_format": "h5"
-                            },
-                            {
-                                "file_type": "unknown",
-                                "file_structure": "unknown",
-                                "file_format": "hdf5"
-                            },
-                            {
-                                "file_type": "unknown",
-                                "file_structure": "unknown",
-                                "file_format": "n5"
-                            },
-                            {
-                                "file_type": "unknown",
-                                "file_structure": "unknown",
-                                "file_format": "zarr"
                             }
                         ],
                         "display": {
@@ -122,6 +97,11 @@
                         "file_filters": [
                             {
                                 "file_type": "unknown",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            },
+                            {
+                                "file_type": "config",
                                 "file_structure": "unknown",
                                 "file_format": "json"
                             }
@@ -224,7 +204,7 @@
                     "name": "pw_rigid",
                     "required": false,
                     "hidden": false,
-                    "help": "If True, piecewise-rigid motion correction will be performed",
+                    "help": "If True, piecewise-rigid motion correction will be performed. If False, rigid motion correction will be performed.",
                     "type": {
                         "param_type": "ToolBooleanParam",
                         "param_datatype": "boolean",
@@ -1056,6 +1036,521 @@
                                 "isxd"
                             ],
                             "file_type": "neural_events"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "NoRMCorre",
+            "key": "caiman_isx_academic__motion_correction",
+            "help": "NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.",
+            "version": "0.2.0",
+            "maturity": "production",
+            "visibility": "private",
+            "toolkit": "Calcium Imaging Processing",
+            "command": "caiman_isx_academic__motion_correction.sh",
+            "resources": {
+                "cpu": 8,
+                "gpu": 0,
+                "memory": 64000,
+                "storage": 100000,
+                "max_file_size": 20000
+            },
+            "params": [
+                {
+                    "key": "input_movie_files",
+                    "name": "Movie(s)",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Single movie file or movie series (isxd, tif, tiff, avi)",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": false,
+                        "file_formats": [
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "miniscope_movie",
+                                "file_structure": "movie",
+                                "file_format": "isxd"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tiff"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tif"
+                            },
+                            {
+                                "file_type": "movie",
+                                "file_structure": "movie",
+                                "file_format": "avi"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 0
+                        }
+                    }
+                },
+                {
+                    "key": "parameters_file",
+                    "name": "Optional Parameters File",
+                    "required": false,
+                    "hidden": false,
+                    "help": "JSON file containing CaImAn processing parameters",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": false,
+                        "file_formats": [
+                            "json"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "unknown",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            },
+                            {
+                                "file_type": "config",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 1
+                        }
+                    }
+                },
+                {
+                    "key": "overwrite_analysis_table_params",
+                    "name": "Overwrite Analysis Table Parameters",
+                    "required": true,
+                    "hidden": false,
+                    "help": "If True and a parameters file has been selected, the analysis table columns will be overwritten by the values contained in the parameters file.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Settings",
+                            "group_order": 0
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "fr",
+                    "name": "fr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Imaging rate in frames per second. If set to 'auto', the frame rate will be automatically determined based on file metadata. If no such metadata is available, CaImAn will default to 30 frames per second.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Dataset",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "min_mov",
+                    "name": "min_mov",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Estimated minimum pixel value in the input movie. When set to 'auto', it will automatically be estimated using the first 400 frames. This value will be used to construct a non-negative output.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "shifts_opencv",
+                    "name": "shifts_opencv",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, bicubic interpolation will be used for correcting motion. If False, Fourier transform interpolation will be used.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 1
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "nonneg_movie",
+                    "name": "nonneg_movie",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, 'min_mov' will be removed from the data to produce an output movie and template that are mostly non-negative.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 2
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "gSig_filt",
+                    "name": "gSig_filt",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Size of the kernel used for high-pass spatial filtering of the data. If unspecified, no spatial filtering will be performed during motion correction. Applying a high-pass spatial filter may improve performance on 1P data by delineating edges and sharpening the images. Such filtering may not be needed for 2P data and could be left unspecified.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 3
+                        },
+                        "min": 1
+                    }
+                },
+                {
+                    "key": "border_nan",
+                    "name": "border_nan",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Strategy for handling NaN values along the boundaries. 'True' will allow NaN values along the boundaries, 'False' will replace any NaN with 0, 'copy' will replace any NaN with the value of the nearest data point, and 'min' will replace any NaN with the minimum value in the image.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 4
+                        },
+                        "choices": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "display_options": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "copy"
+                },
+                {
+                    "key": "num_frames_split",
+                    "name": "num_frames_split",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of frames in each batch when splitting the movie for parallel processing",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 5
+                        }
+                    },
+                    "default": 80
+                },
+                {
+                    "key": "is3D",
+                    "name": "is3D",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Set to True if the input data consists of a 3D recording",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 6
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "max_shifts",
+                    "name": "max_shifts",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum rigid shift per dimension in pixels",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 0
+                        }
+                    },
+                    "default": 6
+                },
+                {
+                    "key": "niter_rig",
+                    "name": "niter_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum number of iterations during rigid motion correction. If set to 0, it will quickly initialize a template with the first frame of the movie.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 1
+                        },
+                        "min": 0
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "splits_rig",
+                    "name": "splits_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of temporal chunks to use for parallelizing rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 2
+                        }
+                    },
+                    "default": 14
+                },
+                {
+                    "key": "num_splits_to_process_rig",
+                    "name": "num_splits_to_process_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Specifies the number of temporal chunks to process in each iteration. If left unspecified, all chunks will be processed at once.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 3
+                        }
+                    }
+                },
+                {
+                    "key": "pw_rigid",
+                    "name": "pw_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, piecewise-rigid motion correction will be performed. If False, rigid motion correction will be performed.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 0
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "strides",
+                    "name": "strides",
+                    "required": false,
+                    "hidden": false,
+                    "help": "The stride controls the shift in pixels between patches of the field of view during piecewise-rigid registration",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 1
+                        }
+                    },
+                    "default": 48
+                },
+                {
+                    "key": "overlaps",
+                    "name": "overlaps",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Overlap between patches in pixels during piecewise-rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 2
+                        }
+                    },
+                    "default": 24
+                },
+                {
+                    "key": "splits_els",
+                    "name": "splits_els",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of temporal chunks to use for parallelizing piecewise-rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 3
+                        }
+                    },
+                    "default": 14
+                },
+                {
+                    "key": "upsample_factor_grid",
+                    "name": "upsample_factor_grid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Upsampling factor to use for per-patch shifts to avoid smearing when merging patches",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 4
+                        }
+                    },
+                    "default": 4
+                },
+                {
+                    "key": "max_deviation_rigid",
+                    "name": "max_deviation_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum deviation in pixels between rigid shifts and shifts of individual patches",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 4
+                        }
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "n_processes",
+                    "name": "n_processes",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of processes used to analyze patches in parallel",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Patches",
+                            "group_order": 0
+                        },
+                        "min": 1
+                    },
+                    "default": 7
+                },
+                {
+                    "key": "output_movie_format",
+                    "name": "Output Movie Format",
+                    "required": false,
+                    "hidden": false,
+                    "help": "File format to use when saving the output motion-corrected movie. If set to 'auto', the file format will match the input files.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Output Settings",
+                            "group_order": 0
+                        },
+                        "choices": [
+                            "auto",
+                            "isxd",
+                            "tiff",
+                            "avi"
+                        ],
+                        "display_options": [
+                            "auto",
+                            "isxd",
+                            "tiff",
+                            "avi"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "auto"
+                }
+            ],
+            "results": [
+                {
+                    "group_key": "caiman_isx_academic__motion_correction",
+                    "group_name": "CaImAn Motion Correction Output Group",
+                    "group_type": "tool_output",
+                    "required": true,
+                    "multiple": false,
+                    "files": [
+                        {
+                            "result_key": "mc_movie",
+                            "result_name": "Motion-Corrected Movie(s)",
+                            "help": "Motion-corrected movie",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd",
+                                "tiff",
+                                "tif",
+                                "avi"
+                            ],
+                            "file_type": "miniscope_movie"
+                        },
+                        {
+                            "result_key": "mc_qc_data",
+                            "result_name": "Motion Correction Quality Assessment",
+                            "help": "Motion correction quality assessment data",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "csv"
+                            ],
+                            "file_type": "motion_correction_qc_data"
                         }
                     ]
                 }

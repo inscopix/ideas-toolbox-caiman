@@ -1,11 +1,17 @@
 import os
 import isx
 import cv2
+import tifffile
+import caiman as cm
 import numpy as np
 from typing import List
-from toolbox.utils.previews import generate_caiman_workflow_previews
+from toolbox.utils.previews import (
+    generate_caiman_workflow_previews,
+    generate_caiman_motion_corrected_previews,
+)
 from toolbox.utils.metadata import generate_caiman_workflow_metadata
 from toolbox.utils.utilities import get_file_size
+from toolbox.utils.exceptions import IdeasError
 import logging
 
 logger = logging.getLogger()
@@ -195,7 +201,7 @@ def convert_caiman_output_to_isxd(
         raw_cellset.flush()
         neural_events.flush()
 
-        # log files creates
+        # log files created
         logger.info(
             f"Raw cell set saved "
             f"({os.path.basename(cellset_raw_filename)}, "
@@ -268,3 +274,144 @@ def convert_caiman_output_to_isxd(
         original_input_indices=original_input_movie_indices,
         input_movies_files=input_movie_files,
     )
+
+
+def convert_memmap_data_to_output_files(
+    memmap_filename,
+    input_movie_files,
+    original_input_movie_indices,
+    frame_rate,
+    output_movie_format,
+    output_dir,
+):
+    """Convert the output H5 file produced by CaImAn to correspond output files.
+
+    :param memmap_filename: path to the output memory-mapped file produced by CaImAn
+    :param input_movie_files: list of path to the input movies
+    :param original_input_movie_indices: original order of the input files prior to sorting
+    :param frame_rate: frame rate to use when creating the output files
+    :param output_movie_format: file format to use for saving the motion-corrected movie
+    :param output_dir: path to the output directory
+    """
+    logger.info(
+        f"Converting CaImAn memory-mapped data to output files (format: {output_movie_format})"
+    )
+
+    # load data from memory-mapped file
+    Yr, dims, T = cm.load_memmap(memmap_filename)
+    images = Yr.T.reshape((T,) + dims, order="F")
+
+    # gather spacing and timing info for each movie file
+    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    if file_ext in ["isxd"]:
+        movies = [isx.Movie.read(f) for f in input_movie_files]
+        num_frames_per_movie = [m.timing.num_samples for m in movies]
+        timing_info = [m.timing for m in movies]
+        spacing_info = [m.spacing for m in movies]
+    elif file_ext in ["tif", "tiff"]:
+        movies = [isx.Movie.read(f) for f in input_movie_files]
+        num_frames_per_movie = [m.timing.num_samples for m in movies]
+        timing_info = [
+            isx.Timing(
+                num_samples=m.timing.num_samples,
+                period=isx.Duration.from_usecs(1.0 / frame_rate * 1e6),
+            )
+            for m in movies
+        ]
+        spacing_info = [m.spacing for m in movies]
+    elif file_ext in ["avi", "mp4"]:
+        caps = [cv2.VideoCapture(f) for f in input_movie_files]
+        num_frames_per_movie = [
+            int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) for cap in caps
+        ]
+        timing_info = [
+            isx.Timing(
+                num_samples=n,
+                period=isx.Duration.from_msecs(1.0 / frame_rate * 1000),
+            )
+            for n in num_frames_per_movie
+        ]
+        spacing_info = [
+            isx.Spacing(
+                num_pixels=(
+                    int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                    int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                )
+            )
+            for cap in caps
+        ]
+        del caps
+    else:
+        logger.warning(
+            f"Conversion of CaImAn data to '{file_ext}' is not supported"
+        )
+        return
+
+    frame_index_cutoffs = [0] + list(np.cumsum(num_frames_per_movie))
+
+    # construct output filenames
+    mc_movie_filenames = [
+        os.path.join(
+            output_dir, f"mc_movie.{str(i).zfill(3)}.{output_movie_format}"
+        )
+        for i in original_input_movie_indices
+    ]
+
+    # write output movie files
+    for i, mc_movie_filename in enumerate(mc_movie_filenames):
+        frame_indices = np.arange(
+            frame_index_cutoffs[i], frame_index_cutoffs[i + 1]
+        )
+
+        if output_movie_format == "isxd":
+            # save data to isxd
+            movie = isx.Movie.write(
+                file_path=mc_movie_filename,
+                timing=timing_info[i],
+                spacing=spacing_info[i],
+                data_type=np.float32,
+            )
+
+            for output_movie_frame_index, image_frame_index in enumerate(
+                frame_indices
+            ):
+                movie.set_frame_data(
+                    output_movie_frame_index, images[image_frame_index]
+                )
+
+            movie.flush()
+        elif output_movie_format in ["tiff", "tif"]:
+            # save data to tiff
+            with tifffile.TiffWriter(mc_movie_filename) as tif:
+                for frame_index in frame_indices:
+                    tif.save(images[frame_index])
+        elif output_movie_format == "avi":
+            # save data to avi
+            height, width = spacing_info[i].num_pixels
+            video = cv2.VideoWriter(
+                mc_movie_filename,
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                frame_rate,
+                (width, height),
+                False,
+            )
+            for frame_index in frame_indices:
+                frame = images[frame_index]
+                normalized_frame = (frame - np.min(frame)) / (
+                    np.max(frame) - np.min(frame)
+                )
+                uint8_frame = (normalized_frame * 255).astype(np.uint8)
+                video.write(uint8_frame)
+            video.release()
+        else:
+            raise IdeasError(
+                "Output file format not supported. Motion-corrected data cannot be saved to disk."
+            )
+
+        logger.info(
+            f"Motion-corrected movie saved "
+            f"({os.path.basename(mc_movie_filename)}, "
+            f"size: {get_file_size(mc_movie_filename)})"
+        )
+
+    return mc_movie_filenames, num_frames_per_movie, frame_index_cutoffs

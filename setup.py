@@ -17,7 +17,7 @@ setup(
     url="https://github.com/inscopix/ideas-toolbox-idl-neural-processing",
     install_requires=[
         f"ideas-python-utils@git+https://{token}@github.com/inscopix/ideas-python-utils.git@10.10.0",
-        f"ideas-commons@git+https://{token}@github.com/inscopix/ideas-commons.git@1.24.0",
+        f"ideas-commons@git+https://{token}@github.com/inscopix/ideas-commons.git@1.25.0",
         f"ideas-schemas@git+https://{token}@github.com/inscopix/ideas-schemas.git@2.4.0",
         f"ideas-tools-profiler@git+https://{token}@github.com/inscopix/ideas-tools-profiler.git@0.2.0",
         "caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.6",
@@ -48,6 +48,9 @@ setup(
         "peakutils==1.3.5",
         "bokeh==3.4.2",
         "holoviews==1.19.1",
+        # movie previews
+        "imageio==2.35.0",
+        "imageio-ffmpeg==0.4.7",
     ]
     + install_requires,
 )

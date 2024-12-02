@@ -18,8 +18,16 @@ from caiman.source_extraction import cnmf
 from toolbox.utils.exceptions import IdeasError
 from toolbox.utils.utilities import movie_series
 from toolbox.utils.utilities import get_file_size
-from toolbox.utils.data_conversion import convert_caiman_output_to_isxd
-from toolbox.utils.previews import generate_initialization_images_preview
+from toolbox.utils.data_conversion import (
+    convert_caiman_output_to_isxd,
+    convert_memmap_data_to_output_files,
+)
+from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
+from toolbox.utils.previews import (
+    generate_caiman_motion_corrected_previews,
+    generate_initialization_images_preview,
+)
+from toolbox.utils.metadata import generate_caiman_motion_correction_metadata
 
 import logging
 
@@ -99,6 +107,7 @@ def caiman_workflow(
     SETTINGS
     :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
                                             will be overwritten by the values specified in the parameters file
+
     DATASET
     :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
     :param decay_time: length of typical transient in seconds
@@ -313,7 +322,7 @@ def caiman_workflow(
     if motion_correct:
         logger.info("Applying motion correction algorithm to the data")
 
-        # perform rigid motion correction
+        # perform motion correction
         mot_correct = MotionCorrect(
             input_movie_files,
             dview=cluster,
@@ -434,5 +443,294 @@ def caiman_workflow(
         original_input_movie_indices=original_input_movie_indices,
     )
 
+    logger.info("Stopping computing cluster")
     cm.stop_server(dview=cluster)
     logger.info("CaImAn cell extraction workflow completed")
+
+
+def motion_correction(
+    *,
+    # Input Files
+    input_movie_files: List[str],
+    parameters_file: Optional[List[str]] = None,
+    overwrite_analysis_table_params: bool = False,
+    # Dataset
+    fr: str = "auto",
+    # General
+    min_mov: str = "auto",
+    shifts_opencv: bool = True,
+    nonneg_movie: bool = True,
+    gSig_filt: Optional[int] = None,
+    border_nan: str = "copy",
+    num_frames_split: int = 80,
+    is3D: bool = False,
+    # Rigid
+    max_shifts: int = 6,
+    niter_rig: int = 1,
+    splits_rig: int = 14,
+    num_splits_to_process_rig: int = None,
+    # Piecewise Rigid
+    pw_rigid: bool = True,
+    strides: int = 48,
+    overlaps: int = 24,
+    splits_els: int = 14,
+    upsample_factor_grid: int = 4,
+    max_deviation_rigid: int = 3,
+    # Patches
+    n_processes: int = 7,
+    # Output Settings
+    output_movie_format: str = "auto",
+):
+    """Apply CaImAn motion correction algorithm to the input movies.
+
+    INPUT FILES
+    :param input_movie_files: list of paths to the input movie files (isxd, tif, tiff, avi)
+    :param parameters_file: path to the json parameters file
+
+    SETTINGS
+    :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
+                                            will be overwritten by the values specified in the parameters file
+
+    DATASET
+    :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
+
+    GENERAL
+    :param min_mov: estimated minimum value of the movie to produce an output that is positive
+    :param shifts_opencv: flag for correcting motion using bicubic interpolation (otherwise FFT interpolation is used)
+    :param nonneg_movie: make the output movie and template mostly nonnegative by removing min_mov from movie
+    :param gSig_filt: size of kernel for high pass spatial filtering in 1p data.
+                      If None no spatial filtering is performed
+    :param border_nan: flag for allowing NaN in the boundaries. True allows NaN, whereas 'copy' copies
+                       the value of the nearest data point
+    :param num_frames_split: number of frames in each batch
+    :param is3D: flag for 3D motion correction
+    :param indices: use that to apply motion correction only on a part of the FOV
+
+    RIGID
+    :param max_shifts: maximum deviation in pixels between rigid shifts and
+                       shifts of individual patches
+    :param niter_rig: maximum number of iterations rigid motion correction
+    :param splits_rig: for parallelization split the movies in num_splits chunks across time
+    :param num_splits_to_process_rig: if None all the splits are processed and the movie is saved,
+                                      otherwise at each iteration num_splits_to_process_rig are considered
+
+    PIECEWISE RIGID
+    :param pw_rigid: If True, piecewise-rigid motion correction will be performed
+    :param strides: how often to start a new patch in pw-rigid registration
+    :param overlaps: overlap between patches in pixels in pw-rigid motion correction
+    :param splits_els: for parallelization split the movies in  num_splits chunks across time
+    :param upsample_factor_grid: upsample factor of shifts per patches to avoid smearing when merging patches
+    :param max_deviation_rigid: maximum deviation allowed for patch with respect to rigid shifts
+
+    PATCHES
+    :param n_processes: Number of processes used for processing patches in parallel
+
+    OUTPUT SETTINGS
+    :param output_movie_format: file format to use for saving the motion-corrected movie
+    """
+    logger.info("CaImAn motion correction started")
+
+    # set output directory
+    output_dir = os.getcwd()
+
+    # update n_processes to match available resources
+    cpu_count = psutil.cpu_count()
+    new_n_processes = np.maximum(
+        np.minimum(n_processes, int(cpu_count - 1)), 1
+    )
+    if n_processes != new_n_processes:
+        logger.info(
+            f"'n_processes' changed from {n_processes} to {new_n_processes} based on a CPU count of {cpu_count}"
+        )
+        n_processes = new_n_processes
+
+    # adjust parameters that can be automatically estimated
+    fr = 30 if fr in ["auto", None] else float(fr)
+    min_mov = None if min_mov in ["auto", None] else float(min_mov)
+
+    # initialize parameters
+    params_dict = {
+        # input files
+        "fnames": input_movie_files,
+        # dataset
+        "fr": fr,
+        # general
+        "motion_correct": True,
+        "min_mov": min_mov,
+        "shifts_opencv": shifts_opencv,
+        "nonneg_movie": nonneg_movie,
+        "gSig_filt": (
+            (gSig_filt, gSig_filt) if gSig_filt is not None else gSig_filt
+        ),
+        "border_nan": (
+            border_nan
+            if border_nan not in ["True", "False"]
+            else ast.literal_eval(border_nan)
+        ),
+        "num_frames_split": num_frames_split,
+        "is3D": is3D,
+        # rigid
+        "max_shifts": (
+            (max_shifts, max_shifts) if max_shifts is not None else max_shifts
+        ),
+        "niter_rig": niter_rig,
+        "splits_rig": splits_rig,
+        "num_splits_to_process_rig": num_splits_to_process_rig,
+        # piecewise rigid
+        "pw_rigid": pw_rigid,
+        "strides": (strides, strides) if strides is not None else strides,
+        "overlaps": (overlaps, overlaps) if overlaps is not None else overlaps,
+        "splits_els": splits_els,
+        "upsample_factor_grid": upsample_factor_grid,
+        "max_deviation_rigid": max_deviation_rigid,
+        # patches
+        "n_processes": n_processes,
+    }
+    parameters = params.CNMFParams(params_dict=params_dict)
+
+    # load parameters from file
+    if parameters_file is not None and overwrite_analysis_table_params:
+        if len(parameters_file) > 1:
+            logger.warning(
+                f"More than 1 parameters files were provided. "
+                f"The first file '{os.path.basename(parameters_file[0])}' "
+                f"will be used for processing."
+            )
+
+        logger.info(
+            f"Loading parameters from input file '{os.path.basename(parameters_file[0])}'"
+        )
+        parameters.change_params_from_jsonfile(parameters_file[0])
+
+    # override motion_correct param
+    if parameters.motion.get("motion_correct") in [False, None]:
+        parameters.change_params(params_dict={"motion_correct": True})
+        logger.info(
+            f"'motion_correct' set to 'True' to enable motion correction"
+        )
+
+    # determine input data frame rate & determine original input order
+    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    original_input_movie_indices = list(range(len(input_movie_files)))
+    if file_ext == "isxd":
+        # validate input files form a valid series
+        # and order them by their start time
+        # (keep track of the original order of the input files since this is used to statically name output files)
+        original_input_movie_files = input_movie_files
+        input_movie_files = movie_series(input_movie_files)
+        original_input_movie_indices = [
+            input_movie_files.index(f) for f in original_input_movie_files
+        ]
+
+        mov = isx.Movie.read(input_movie_files[0])
+        fr = 1e6 / mov.timing.period.to_usecs()
+        parameters.change_params(params_dict={"fr": fr})
+        logger.info(f"'fr' updated to {fr} based on file metadata")
+        del mov
+    elif file_ext in ["avi", "mp4"]:
+        cap = cv2.VideoCapture(input_movie_files[0])
+        fr = cap.get(cv2.CAP_PROP_FPS)
+        parameters.change_params(params_dict={"fr": fr})
+        logger.info(f"'fr' updated to {fr} based on file metadata")
+        del cap
+    else:
+        if parameters.data.get("fr") is None:
+            default_fr = 30
+            parameters.change_params(params_dict={"fr": default_fr})
+            logger.info(
+                f"'fr' not specified, defaulting to {default_fr} frames per second"
+            )
+
+    # set output movie format to match input movie format
+    if output_movie_format == "auto":
+        output_movie_format = file_ext
+
+    # set up computing cluster
+    logger.info("Setting up computing cluster")
+    _, cluster, n_processes = cm.cluster.setup_cluster(n_processes=n_processes)
+    logger.info(f"Computing cluster set up (n_processes={n_processes})")
+
+    # perform motion correction
+    logger.info("Applying motion correction algorithm to the data")
+    mot_correct = MotionCorrect(
+        input_movie_files,
+        dview=cluster,
+        **parameters.get_group("motion"),
+    )
+    mot_correct.motion_correct(save_movie=True)
+
+    fname_mc = (
+        mot_correct.fname_tot_els if pw_rigid else mot_correct.fname_tot_rig
+    )
+    if fname_mc == [None]:
+        fname_mc = mot_correct.mmap_file
+
+    if pw_rigid:
+        bord_px = np.ceil(
+            np.maximum(
+                np.max(np.abs(mot_correct.x_shifts_els)),
+                np.max(np.abs(mot_correct.y_shifts_els)),
+            )
+        ).astype(int)
+    else:
+        bord_px = np.ceil(np.max(np.abs(mot_correct.shifts_rig))).astype(int)
+
+    bord_px = 0 if border_nan == "copy" else bord_px
+    fname_new = cm.save_memmap(
+        fname_mc,
+        base_name="memmap_",
+        order="C",
+        border_to_0=bord_px,
+        dview=cluster,
+    )
+
+    logger.info(
+        f"Motion corrected data written to memory-mapped file "
+        f"({os.path.basename(fname_new)}, "
+        f"size: {get_file_size(fname_new)})"
+    )
+
+    # convert motion-corrected data to corresponding output files
+    (
+        mc_movie_filenames,
+        num_frames_per_movie,
+        frame_index_cutoffs,
+    ) = convert_memmap_data_to_output_files(
+        memmap_filename=fname_new,
+        input_movie_files=input_movie_files,
+        original_input_movie_indices=original_input_movie_indices,
+        frame_rate=fr,
+        output_movie_format=output_movie_format,
+        output_dir=output_dir,
+    )
+
+    # generate CaImAn motion correction quality assessment data
+    mc_qc_filename = os.path.join(output_dir, "mc_qc_data.csv")
+    generate_motion_correction_quality_assessment_data(
+        mc_obj=mot_correct,
+        mc_qc_filename=mc_qc_filename,
+        num_frames_per_movie=num_frames_per_movie,
+    )
+
+    # generate previews
+    logger.info("Generating motion-corrected data previews")
+    generate_caiman_motion_corrected_previews(
+        mc_movie_filenames=mc_movie_filenames,
+        mc_obj=mot_correct,
+        original_input_indices=original_input_movie_indices,
+        frame_index_cutoffs=frame_index_cutoffs,
+    )
+
+    # generate metadata
+    logger.info("Generating motion-corrected metadata")
+    generate_caiman_motion_correction_metadata(
+        mc_movie_filenames=mc_movie_filenames,
+        mc_obj=mot_correct,
+        original_input_indices=original_input_movie_indices,
+        input_movies_files=input_movie_files,
+        sampling_rate=fr,
+    )
+
+    logger.info("Stopping computing cluster")
+    cm.stop_server(dview=cluster)
+    logger.info("CaImAn motion correction completed")

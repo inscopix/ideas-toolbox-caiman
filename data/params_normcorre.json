@@ -1,0 +1,14 @@
+{
+    "data": {
+        "fr": 10
+    },
+    "motion": {
+        "pw_rigid": true,
+        "max_shifts": [5, 5],
+        "gSig_filt": [3, 3],
+        "strides": [40, 40],
+        "overlaps": [20, 20],
+        "max_deviation_rigid": 3,
+        "border_nan": "copy"
+    }
+}

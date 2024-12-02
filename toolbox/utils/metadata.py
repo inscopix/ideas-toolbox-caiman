@@ -1,6 +1,10 @@
 import os
 import json
 import isx
+import cv2
+import pandas as pd
+import numpy as np
+from PIL import Image
 from typing import List
 from toolbox.utils.utilities import (
     compute_sampling_rate,
@@ -34,9 +38,6 @@ def is_multicolor(metadata, check_interleaved=True):
         "extraProperties" not in metadata
         or metadata["extraProperties"] is None
     ):
-        logger.warn(
-            "Unable to determine whether the input is a multicolor movie"
-        )
         return False
 
     # return False if we cannot determine if the file is multicolor
@@ -88,9 +89,6 @@ def is_multiplane(metadata, check_interleaved=True):
         "extraProperties" not in metadata
         or metadata["extraProperties"] is None
     ):
-        logger.warn(
-            "Unable to determine whether the input is a multiplane movie"
-        )
         return False
 
     has_multiplane_metadata = False
@@ -449,6 +447,158 @@ def generate_caiman_workflow_metadata(
             metadata=metadata,
             efocus_vals=efocus_vals[i],
         )
+
+    # save metadata to file
+    output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
+    with open(output_metadata_filename, "w") as f:
+        json.dump(metadata, f, indent=4)
+
+
+def generate_movie_metadata(
+    movie_filename: str,
+    file_key: str,
+    metadata: dict,
+    efocus_vals: List[int],
+    sampling_rate: float,
+):
+    """Generate metadata for a single movie file.
+
+    :param movie_filename: path to the input cell set
+    :param file_key: key associated with the file for which metadata is constructed
+    :param metadata: metadata dictionary
+    :param efocus_vals: list of efocus values
+    :param sampling_rate: frame rate of the movie
+    """
+    file_ext = os.path.splitext(movie_filename)[1][1:]
+    if file_ext in ["isxd"]:
+        isx_metadata = read_isxd_metadata(movie_filename)
+        timing_info = isx_metadata["timingInfo"]
+        timing_info["sampling_rate"] = sampling_rate
+        spacing_info = isx_metadata["spacingInfo"]
+    elif file_ext in ["tif", "tiff"]:
+        image_stack = Image.open(movie_filename)
+        timing_info = {
+            "numTimes": image_stack.n_frames,
+            "sampling_rate": sampling_rate,
+        }
+        spacing_info = {
+            "numPixels": {
+                "x": image_stack.width,
+                "y": image_stack.height,
+                "z": image_stack.n_frames,
+            },
+        }
+    elif file_ext in ["avi", "mp4"]:
+        cap = cv2.VideoCapture(movie_filename)
+        timing_info = {
+            "numTimes": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            "sampling_rate": sampling_rate,
+        }
+        spacing_info = {
+            "numPixels": {
+                "x": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+                "y": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            },
+        }
+        del cap
+    else:
+        timing_info = None
+        spacing_info = None
+
+    metadata[file_key] = {
+        "timingInfo": timing_info,
+        "spacingInfo": spacing_info,
+        "microscope": {"focus": efocus_vals},
+    }
+
+
+def generate_motion_correction_qc_metadata(
+    mc_obj,
+    file_key: str,
+    metadata: dict,
+):
+    """Generate metadata for motion correction quality control data.
+
+    :param mc_obj: CaImAn motion correction object
+    :param file_key: key associated with the file for which metadata is constructed
+    :param metadata: metadata dictionary
+    """
+    # rigid shifts metadata
+    x_shifts_rig, y_shifts_rig = list(zip(*mc_obj.shifts_rig))
+    mc_qc_metadata = {
+        "metrics": {
+            "min_x_rigid_shift": np.min(x_shifts_rig),
+            "max_x_rigid_shift": np.max(x_shifts_rig),
+            "min_y_rigid_shift": np.min(y_shifts_rig),
+            "max_y_rigid_shift": np.max(y_shifts_rig),
+        }
+    }
+
+    # piecewise rigid shifts metadata
+    if mc_obj.pw_rigid:
+        mc_qc_metadata["metrics"]["min_x_pw_rigid_shift"] = np.min(
+            mc_obj.x_shifts_els
+        )
+        mc_qc_metadata["metrics"]["max_x_pw_rigid_shift"] = np.max(
+            mc_obj.x_shifts_els
+        )
+        mc_qc_metadata["metrics"]["min_y_pw_rigid_shift"] = np.min(
+            mc_obj.y_shifts_els
+        )
+        mc_qc_metadata["metrics"]["max_y_pw_rigid_shift"] = np.max(
+            mc_obj.y_shifts_els
+        )
+        mc_qc_metadata["metrics"]["num_patches"] = len(mc_obj.x_shifts_els[0])
+
+    # update metadata dictionary
+    metadata[file_key] = mc_qc_metadata
+
+
+def generate_caiman_motion_correction_metadata(
+    mc_movie_filenames: str,
+    mc_obj,
+    original_input_indices: List[int],
+    input_movies_files: List[str],
+    sampling_rate: float,
+    output_dir: str = None,
+):
+    """Generate metadata for files produced by the CaImAn workflow.
+
+    :param mc_movie_filenames: path to the motion-corrected movie files
+    :param mc_obj: CaImAn motion correction object
+    :param original_input_indices: original order of the input files prior to sorting
+    :param input_movies_files: list of input movie file paths
+    :param sampling_rate: frame rate of the output movie
+    :param output_dir: path to the output directory
+    """
+    if output_dir is None:
+        output_dir = os.getcwd()
+
+    metadata = {}
+
+    # extract e-focus values from input movies if available
+    efocus_vals = [None] * len(input_movies_files)
+    for i, f in enumerate(input_movies_files):
+        try:
+            if f.lower().endswith(".isxd"):
+                efocus_vals[i] = get_efocus(f)
+        except Exception:
+            pass
+
+    # motion-corrected movie metadata
+    for i, m in zip(original_input_indices, mc_movie_filenames):
+        generate_movie_metadata(
+            movie_filename=m,
+            file_key=f"mc_movie.{str(i).zfill(3)}",
+            metadata=metadata,
+            efocus_vals=efocus_vals[i],
+            sampling_rate=sampling_rate,
+        )
+
+    # motion correction quality assessment metadata
+    generate_motion_correction_qc_metadata(
+        mc_obj=mc_obj, file_key="mc_qc_data", metadata=metadata
+    )
 
     # save metadata to file
     output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
