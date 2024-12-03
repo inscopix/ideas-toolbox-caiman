@@ -337,7 +337,7 @@ def test_caiman_motion_correction_single_2p_tif_file_with_json_params_file():
     exp_height = 60
     exp_timing = isx.Timing(
         num_samples=exp_num_frames,
-        period=isx.Duration.from_usecs(1.0 / 30.0 * 1e6),
+        period=isx.Duration.from_usecs(1.0 / 10.0 * 1e6),
     )
     exp_spacing = isx.Spacing(num_pixels=(exp_height, exp_width))
 
@@ -378,12 +378,12 @@ def test_caiman_motion_correction_single_2p_tif_file_with_json_params_file():
             "cropped": [],
             "dropped": [],
             "numTimes": 2000,
-            "period": {"den": 1000000, "num": 33333},
+            "period": {"den": 1000000, "num": 100000},
             "start": {
                 "secsSinceEpoch": {"den": 1, "num": 0},
                 "utcOffset": 0,
             },
-            "sampling_rate": 30.0,
+            "sampling_rate": 10.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 80, "y": 60},

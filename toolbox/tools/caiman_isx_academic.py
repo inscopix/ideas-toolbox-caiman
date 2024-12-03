@@ -281,6 +281,19 @@ def caiman_workflow(
         )
         parameters.change_params_from_jsonfile(parameters_file[0])
 
+        # adjust parameters that were overridden by parameters file
+        if parameters.data.get("fr") != fr:
+            fr = parameters.data.get("fr")
+            logger.info(
+                f"'fr' set to {fr} based on the selected parameters file"
+            )
+
+        if parameters.motion.get("pw_rigid") != pw_rigid:
+            pw_rigid = parameters.motion.get("pw_rigid")
+            logger.info(
+                f"'pw_rigid' set to {pw_rigid} based on the selected parameters file"
+            )
+
     # determine input data frame rate & determine original input order
     file_ext = os.path.splitext(input_movie_files[0])[1][1:]
     original_input_movie_indices = list(range(len(input_movie_files)))
@@ -332,13 +345,13 @@ def caiman_workflow(
 
         fname_mc = (
             mot_correct.fname_tot_els
-            if pw_rigid
+            if parameters.motion.get("pw_rigid")
             else mot_correct.fname_tot_rig
         )
         if fname_mc == [None]:
             fname_mc = mot_correct.mmap_file
 
-        if pw_rigid:
+        if parameters.motion.get("pw_rigid"):
             bord_px = np.ceil(
                 np.maximum(
                     np.max(np.abs(mot_correct.x_shifts_els)),
@@ -602,6 +615,19 @@ def motion_correction(
         )
         parameters.change_params_from_jsonfile(parameters_file[0])
 
+        # adjust parameters that were overridden by parameters file
+        if parameters.motion.get("pw_rigid") != pw_rigid:
+            if parameters.data.get("fr") != fr:
+                fr = parameters.data.get("fr")
+                logger.info(
+                    f"'fr' set to {fr} based on the selected parameters file"
+                )
+
+            pw_rigid = parameters.motion.get("pw_rigid")
+            logger.info(
+                f"'pw_rigid' set to {pw_rigid} based on the selected parameters file"
+            )
+
     # override motion_correct param
     if parameters.motion.get("motion_correct") in [False, None]:
         parameters.change_params(params_dict={"motion_correct": True})
@@ -659,13 +685,17 @@ def motion_correction(
     )
     mot_correct.motion_correct(save_movie=True)
 
-    fname_mc = (
-        mot_correct.fname_tot_els if pw_rigid else mot_correct.fname_tot_rig
-    )
+    if hasattr(mot_correct, "fname_tot_els") and parameters.motion.get(
+        "pw_rigid"
+    ):
+        fname_mc = mot_correct.fname_tot_els
+    else:
+        fname_mc = mot_correct.fname_tot_rig
+
     if fname_mc == [None]:
         fname_mc = mot_correct.mmap_file
 
-    if pw_rigid:
+    if parameters.motion.get("pw_rigid"):
         bord_px = np.ceil(
             np.maximum(
                 np.max(np.abs(mot_correct.x_shifts_els)),
@@ -699,7 +729,7 @@ def motion_correction(
         memmap_filename=fname_new,
         input_movie_files=input_movie_files,
         original_input_movie_indices=original_input_movie_indices,
-        frame_rate=fr,
+        frame_rate=parameters.data.get("fr"),
         output_movie_format=output_movie_format,
         output_dir=output_dir,
     )
@@ -728,7 +758,7 @@ def motion_correction(
         mc_obj=mot_correct,
         original_input_indices=original_input_movie_indices,
         input_movies_files=input_movie_files,
-        sampling_rate=fr,
+        sampling_rate=parameters.data.get("fr"),
     )
 
     logger.info("Stopping computing cluster")

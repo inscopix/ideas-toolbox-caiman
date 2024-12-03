@@ -382,7 +382,7 @@ def convert_memmap_data_to_output_files(
             movie.flush()
         elif output_movie_format in ["tiff", "tif"]:
             # save data to tiff
-            with tifffile.TiffWriter(mc_movie_filename) as tif:
+            with tifffile.TiffWriter(mc_movie_filename, bigtiff=True) as tif:
                 for frame_index in frame_indices:
                     tif.save(images[frame_index])
         elif output_movie_format == "avi":
