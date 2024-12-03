@@ -2,6 +2,7 @@ import os
 import shutil
 import pytest
 import isx
+import json
 import numpy as np
 from toolbox.tools.caiman_isx_academic import caiman_workflow
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
@@ -1293,3 +1294,413 @@ def test_caiman_cnmf_workflow_on_2p_data_with_minimal_params():
         "output_metadata.json",
     ]:
         assert f in act_output_files
+
+
+def test_caiman_cnmfe_workflow_unordered_isxd_movie_series():
+    """Verify that the CaImAn CNMF-E workflow correctly processes an UNORDERED ISXD movie series."""
+    input_movie_files = [
+        os.path.join(DATA_DIR, "movie_part2.isxd"),
+        os.path.join(DATA_DIR, "movie_part3.isxd"),
+        os.path.join(DATA_DIR, "movie_part1.isxd"),
+    ]
+
+    caiman_workflow(input_movie_files=input_movie_files)
+
+    # validate existence of output files
+    output_dir = os.getcwd()
+    act_output_files = os.listdir(output_dir)
+    for f in [
+        # caiman output
+        "caiman_output.hdf5",
+        "initialization_images.png",
+        # raw cell set
+        "cellset_raw.000.isxd",
+        "traces_cellset_raw.000.png",
+        "footprints_cellset_raw.000.png",
+        "cellset_raw.001.isxd",
+        "traces_cellset_raw.001.png",
+        "footprints_cellset_raw.001.png",
+        "cellset_raw.002.isxd",
+        "traces_cellset_raw.002.png",
+        "footprints_cellset_raw.002.png",
+        # denoised cell set
+        "cellset_denoised.000.isxd",
+        "traces_cellset_denoised.000.png",
+        "footprints_cellset_denoised.000.png",
+        "cellset_denoised.001.isxd",
+        "traces_cellset_denoised.001.png",
+        "footprints_cellset_denoised.001.png",
+        "cellset_denoised.002.isxd",
+        "traces_cellset_denoised.002.png",
+        "footprints_cellset_denoised.002.png",
+        # neural events
+        "neural_events.000.isxd",
+        "preview_neural_events.000.png",
+        "neural_events.001.isxd",
+        "preview_neural_events.001.png",
+        "neural_events.002.isxd",
+        "preview_neural_events.002.png",
+        # metadata
+        "output_metadata.json",
+    ]:
+        assert f in act_output_files
+
+    # validate CaImAn output
+    model_file = os.path.join(output_dir, "caiman_output.hdf5")
+    model = load_CNMF(model_file)
+    act_num_cells = len(model.estimates.C)
+    act_num_accepted_cells = len(model.estimates.idx_components)
+    act_num_rejected_cells = len(model.estimates.idx_components_bad)
+    assert act_num_cells == act_num_accepted_cells + act_num_rejected_cells
+
+    exp_num_cells = 6
+    exp_num_accepted_cells = 6
+    exp_num_rejected_cells = 0
+    assert act_num_cells == exp_num_cells
+    assert act_num_accepted_cells == exp_num_accepted_cells
+    assert act_num_rejected_cells == exp_num_rejected_cells
+
+    # validate output ISXD files
+    input_movie_part0 = isx.Movie.read(input_movie_files[0])
+    input_movie_part1 = isx.Movie.read(input_movie_files[1])
+    input_movie_part2 = isx.Movie.read(input_movie_files[2])
+
+    # validate raw cell sets
+    raw_cellset_part0 = isx.CellSet.read("cellset_raw.000.isxd")
+    assert raw_cellset_part0.timing.num_samples == 95
+    assert raw_cellset_part0.spacing.num_pixels == (128, 128)
+    assert input_movie_part0.spacing == raw_cellset_part0.spacing
+    assert input_movie_part0.timing == raw_cellset_part0.timing
+
+    raw_cellset_part1 = isx.CellSet.read("cellset_raw.001.isxd")
+    assert raw_cellset_part1.timing.num_samples == 34
+    assert raw_cellset_part1.spacing.num_pixels == (128, 128)
+    assert input_movie_part1.spacing == raw_cellset_part1.spacing
+    assert input_movie_part1.timing == raw_cellset_part1.timing
+
+    raw_cellset_part2 = isx.CellSet.read("cellset_raw.002.isxd")
+    assert raw_cellset_part2.timing.num_samples == 100
+    assert raw_cellset_part2.spacing.num_pixels == (128, 128)
+    assert input_movie_part2.spacing == raw_cellset_part2.spacing
+    assert input_movie_part2.timing == raw_cellset_part2.timing
+
+    # validate denoised cell sets
+    denoised_cellset_part0 = isx.CellSet.read("cellset_denoised.000.isxd")
+    assert denoised_cellset_part0.timing.num_samples == 95
+    assert denoised_cellset_part0.spacing.num_pixels == (128, 128)
+    assert input_movie_part0.spacing == denoised_cellset_part0.spacing
+    assert input_movie_part0.timing == denoised_cellset_part0.timing
+
+    denoised_cellset_part1 = isx.CellSet.read("cellset_denoised.001.isxd")
+    assert denoised_cellset_part1.timing.num_samples == 34
+    assert denoised_cellset_part1.spacing.num_pixels == (128, 128)
+    assert input_movie_part1.spacing == denoised_cellset_part1.spacing
+    assert input_movie_part1.timing == denoised_cellset_part1.timing
+
+    denoised_cellset_part2 = isx.CellSet.read("cellset_denoised.002.isxd")
+    assert denoised_cellset_part2.timing.num_samples == 100
+    assert denoised_cellset_part2.spacing.num_pixels == (128, 128)
+    assert input_movie_part2.spacing == denoised_cellset_part2.spacing
+    assert input_movie_part2.timing == denoised_cellset_part2.timing
+
+    # validate event sets
+    eventset_part0 = isx.EventSet.read("neural_events.000.isxd")
+    assert eventset_part0.timing.num_samples == 95
+    assert input_movie_part0.timing == eventset_part0.timing
+
+    eventset_part1 = isx.EventSet.read("neural_events.001.isxd")
+    assert eventset_part1.timing.num_samples == 34
+    assert input_movie_part1.timing == eventset_part1.timing
+
+    eventset_part2 = isx.EventSet.read("neural_events.002.isxd")
+    assert eventset_part2.timing.num_samples == 100
+    assert input_movie_part2.timing == eventset_part2.timing
+
+    # validate output metadata
+    with open("output_metadata.json") as f:
+        act_metadata = json.load(f)
+        act_caiman_output_metadata = act_metadata["caiman_output"]
+        act_raw_cellset_metadata0 = act_metadata["cellset_raw.000"]
+        act_raw_cellset_metadata1 = act_metadata["cellset_raw.001"]
+        act_raw_cellset_metadata2 = act_metadata["cellset_raw.002"]
+        act_denoised_cellset_metadata0 = act_metadata["cellset_denoised.000"]
+        act_denoised_cellset_metadata1 = act_metadata["cellset_denoised.001"]
+        act_denoised_cellset_metadata2 = act_metadata["cellset_denoised.002"]
+        act_eventset_metadata0 = act_metadata["neural_events.000"]
+        act_eventset_metadata1 = act_metadata["neural_events.001"]
+        act_eventset_metadata2 = act_metadata["neural_events.002"]
+
+    # caiman metadata
+    exp_caiman_output_metadata = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        }
+    }
+    assert exp_caiman_output_metadata == act_caiman_output_metadata
+
+    # raw cell sets metadata
+    exp_raw_cellset_metadata0 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 95,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 30100},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 39600},
+                "utcOffset": 0,
+            },
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_raw_cellset_metadata0 == act_raw_cellset_metadata0
+
+    exp_raw_cellset_metadata1 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 34,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 62300},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 65700},
+                "utcOffset": 0,
+            },
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_raw_cellset_metadata1 == act_raw_cellset_metadata1
+
+    exp_raw_cellset_metadata2 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 100,
+            "period": {"den": 1000, "num": 100},
+            "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
+            "sampling_rate": 10.0,
+            "end": {"secsSinceEpoch": {"den": 1, "num": 10}, "utcOffset": 0},
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_raw_cellset_metadata2 == act_raw_cellset_metadata2
+
+    # denoised cell sets metadata
+    exp_denoised_cellset_metadata0 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 95,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 30100},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 39600},
+                "utcOffset": 0,
+            },
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_denoised_cellset_metadata0 == act_denoised_cellset_metadata0
+
+    exp_denoised_cellset_metadata1 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 34,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 62300},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 65700},
+                "utcOffset": 0,
+            },
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_denoised_cellset_metadata1 == act_denoised_cellset_metadata1
+
+    exp_denoised_cellset_metadata2 = {
+        "metrics": {
+            "num_accepted_cells": 6,
+            "num_undecided_cells": 0,
+            "num_rejected_cells": 0,
+            "total_num_cells": 6,
+        },
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 100,
+            "period": {"den": 1000, "num": 100},
+            "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
+            "sampling_rate": 10.0,
+            "end": {"secsSinceEpoch": {"den": 1, "num": 10}, "utcOffset": 0},
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_denoised_cellset_metadata2 == act_denoised_cellset_metadata2
+
+    # event sets metadata
+    exp_eventset_metadata0 = {
+        "metrics": {"total_num_cells": 6},
+        "timingInfo": {
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 30100},
+                "utcOffset": 0,
+            },
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 39600},
+                "utcOffset": 0,
+            },
+            "numSamples": [32, 19, 24, 25, 20, 18],
+            "numFrames": 95,
+            "period": {"den": 1000, "num": 100},
+            "sampling_rate": 10.0,
+            "dropped": [],
+            "cropped": [],
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_eventset_metadata0 == act_eventset_metadata0
+
+    exp_eventset_metadata1 = {
+        "metrics": {"total_num_cells": 6},
+        "timingInfo": {
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 62300},
+                "utcOffset": 0,
+            },
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 65700},
+                "utcOffset": 0,
+            },
+            "numSamples": [8, 4, 5, 4, 10, 5],
+            "numFrames": 34,
+            "period": {"den": 1000, "num": 100},
+            "sampling_rate": 10.0,
+            "dropped": [],
+            "cropped": [],
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_eventset_metadata1 == act_eventset_metadata1
+
+    exp_eventset_metadata2 = {
+        "metrics": {"total_num_cells": 6},
+        "timingInfo": {
+            "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
+            "end": {
+                "secsSinceEpoch": {"den": 1000, "num": 10000},
+                "utcOffset": 0,
+            },
+            "numSamples": [40, 11, 13, 11, 22, 12],
+            "numFrames": 100,
+            "period": {"den": 1000, "num": 100},
+            "sampling_rate": 10.0,
+            "dropped": [],
+            "cropped": [],
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_eventset_metadata2 == act_eventset_metadata2

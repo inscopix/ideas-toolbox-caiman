@@ -309,7 +309,9 @@ def caiman_workflow(
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
-        parameters.change_params(params_dict={"fr": fr})
+        parameters.change_params(
+            params_dict={"fr": fr, "fnames": input_movie_files}
+        )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
     elif file_ext in ["avi", "mp4"]:
@@ -650,7 +652,9 @@ def motion_correction(
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
-        parameters.change_params(params_dict={"fr": fr})
+        parameters.change_params(
+            params_dict={"fr": fr, "fnames": input_movie_files}
+        )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
     elif file_ext in ["avi", "mp4"]:

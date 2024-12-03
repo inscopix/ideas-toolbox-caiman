@@ -575,7 +575,6 @@ def generate_caiman_workflow_previews(
     cellset_denoised_filenames: List[str],
     eventset_filenames: List[str],
     original_input_indices: List[int],
-    global_cellset_filename: str,
     output_dir: str = None,
 ):
     """Generate previews for files produced by the CaImAn workflow.
@@ -584,7 +583,6 @@ def generate_caiman_workflow_previews(
     :param cellset_denoised_filenames: path to the denoised cell set files
     :param eventset_filenames: path to the event set files
     :param original_input_indices: original order of the input files prior to sorting
-    :param global_cellset_filename: path to the global cell set in which all traces are concatenated
     :param output_dir: path to the output directory
     """
     if output_dir is None:

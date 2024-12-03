@@ -294,7 +294,6 @@ def generate_cell_set_metadata(
         },
         "spacingInfo": cell_set_metadata["spacingInfo"],
         "microscope": {"focus": efocus_vals},
-        "isx": cell_set_metadata,
     }
 
     # add method and units metadata if available
@@ -351,7 +350,6 @@ def generate_event_set_metadata(
             "cropped": [],
         },
         "microscope": {"focus": efocus_vals},
-        "isx": event_set_metadata,
     }
 
 
@@ -421,29 +419,27 @@ def generate_caiman_workflow_metadata(
         metadata=metadata,
     )
 
-    # raw cell set metadata
-    for i, c in zip(original_input_indices, cellset_raw_filenames):
+    for output_file_index, i in enumerate(original_input_indices):
+        # raw cell set metadata
         generate_cell_set_metadata(
-            cellset_filename=c,
-            file_key=f"cellset_raw.{str(i).zfill(3)}",
+            cellset_filename=cellset_raw_filenames[output_file_index],
+            file_key=f"cellset_raw.{str(output_file_index).zfill(3)}",
             metadata=metadata,
             efocus_vals=efocus_vals[i],
         )
 
-    # denoised cell set metadata
-    for i, c in zip(original_input_indices, cellset_denoised_filenames):
+        # denoised cell set metadata
         generate_cell_set_metadata(
-            cellset_filename=c,
-            file_key=f"cellset_denoised.{str(i).zfill(3)}",
+            cellset_filename=cellset_denoised_filenames[output_file_index],
+            file_key=f"cellset_denoised.{str(output_file_index).zfill(3)}",
             metadata=metadata,
             efocus_vals=efocus_vals[i],
         )
 
-    # event set metadata
-    for i, e in zip(original_input_indices, eventset_filenames):
+        # event set metadata
         generate_event_set_metadata(
-            eventset_filename=e,
-            file_key=f"neural_events.{str(i).zfill(3)}",
+            eventset_filename=eventset_filenames[output_file_index],
+            file_key=f"neural_events.{str(output_file_index).zfill(3)}",
             metadata=metadata,
             efocus_vals=efocus_vals[i],
         )
@@ -586,10 +582,10 @@ def generate_caiman_motion_correction_metadata(
             pass
 
     # motion-corrected movie metadata
-    for i, m in zip(original_input_indices, mc_movie_filenames):
+    for output_file_index, i in enumerate(original_input_indices):
         generate_movie_metadata(
-            movie_filename=m,
-            file_key=f"mc_movie.{str(i).zfill(3)}",
+            movie_filename=mc_movie_filenames[output_file_index],
+            file_key=f"mc_movie.{str(output_file_index).zfill(3)}",
             metadata=metadata,
             efocus_vals=efocus_vals[i],
             sampling_rate=sampling_rate,

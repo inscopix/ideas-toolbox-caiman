@@ -1799,3 +1799,177 @@ def test_caiman_motion_correction_avi_movie_series_to_tiff_output():
         }
     }
     assert exp_mc_qc_metadata == act_mc_qc_metadata
+
+
+def test_caiman_motion_correction_isxd_movie_series_correct_order():
+    """Verify that the CaImAn motion correction algorithm can be applied to
+    an ISXD movie series consisting of 3 individual movies and output
+    files are correctly named and associated with the correct preview
+    and metadata.
+    """
+    input_movie_files = [
+        os.path.join(DATA_DIR, "movie_part2.isxd"),
+        os.path.join(DATA_DIR, "movie_part3.isxd"),
+        os.path.join(DATA_DIR, "movie_part1.isxd"),
+    ]
+
+    motion_correction(input_movie_files=input_movie_files)
+
+    # validate existence of output files
+    output_dir = os.getcwd()
+    act_output_files = os.listdir(output_dir)
+    for f in [
+        # motion-corrected movie
+        "mc_movie.000.isxd",
+        "mc_movie.001.isxd",
+        "mc_movie.002.isxd",
+        "preview_mc_movie.000.mp4",
+        "preview_mc_movie.001.mp4",
+        "preview_mc_movie.002.mp4",
+        # motion correction quality control data
+        "mc_qc_data.csv",
+        "preview_rigid_shifts.png",
+        "preview_piecewise_rigid_shifts.png",
+        # metadata
+        "output_metadata.json",
+    ]:
+        assert f in act_output_files
+
+    # validate output ISXD files
+    input_movie_part0 = isx.Movie.read(input_movie_files[0])
+    mc_movie_part0 = isx.Movie.read("mc_movie.000.isxd")
+    assert mc_movie_part0.timing.num_samples == 95
+    assert mc_movie_part0.spacing.num_pixels == (128, 128)
+    assert input_movie_part0.spacing == mc_movie_part0.spacing
+    assert input_movie_part0.timing == mc_movie_part0.timing
+
+    input_movie_part1 = isx.Movie.read(input_movie_files[1])
+    mc_movie_part1 = isx.Movie.read("mc_movie.001.isxd")
+    assert mc_movie_part1.timing.num_samples == 34
+    assert mc_movie_part1.spacing.num_pixels == (128, 128)
+    assert input_movie_part1.spacing == mc_movie_part1.spacing
+    assert input_movie_part1.timing == mc_movie_part1.timing
+
+    input_movie_part2 = isx.Movie.read(input_movie_files[2])
+    mc_movie_part2 = isx.Movie.read("mc_movie.002.isxd")
+    assert mc_movie_part2.timing.num_samples == 100
+    assert mc_movie_part2.spacing.num_pixels == (128, 128)
+    assert input_movie_part2.spacing == mc_movie_part2.spacing
+    assert input_movie_part2.timing == mc_movie_part2.timing
+
+    # validate output quality control data
+    act_qc_data = pd.read_csv("mc_qc_data.csv")
+    assert act_qc_data.shape == (229, 7)
+    assert list(act_qc_data.columns) == [
+        "movie_index",
+        "movie_frame_index",
+        "series_frame_index",
+        "x_shifts_rig",
+        "y_shifts_rig",
+        "x_shifts_els",
+        "y_shifts_els",
+    ]
+    assert (
+        act_qc_data["movie_index"].to_list() == [0] * 100 + [1] * 95 + [2] * 34
+    )
+    assert act_qc_data["movie_frame_index"].to_list() == list(
+        range(100)
+    ) + list(range(95)) + list(range(34))
+    assert act_qc_data["series_frame_index"].to_list() == list(range(229))
+
+    # validate output metadata
+    with open("output_metadata.json") as f:
+        act_metadata = json.load(f)
+        act_mc_movie_metadata0 = act_metadata["mc_movie.000"]
+        act_mc_movie_metadata1 = act_metadata["mc_movie.001"]
+        act_mc_movie_metadata2 = act_metadata["mc_movie.002"]
+        act_mc_qc_metadata = act_metadata["mc_qc_data"]
+
+    # motion-corrected movie metadata
+    exp_mc_movie_metadata0 = {
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 95,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 30100},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_mc_movie_metadata0 == act_mc_movie_metadata0
+
+    exp_mc_movie_metadata1 = {
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 34,
+            "period": {"den": 1000, "num": 100},
+            "start": {
+                "secsSinceEpoch": {"den": 1000, "num": 62300},
+                "utcOffset": 0,
+            },
+            "sampling_rate": 10.0,
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_mc_movie_metadata1 == act_mc_movie_metadata1
+
+    exp_mc_movie_metadata2 = {
+        "timingInfo": {
+            "blank": [],
+            "cropped": [],
+            "dropped": [],
+            "numTimes": 100,
+            "period": {"den": 1000, "num": 100},
+            "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
+            "sampling_rate": 10.0,
+        },
+        "spacingInfo": {
+            "numPixels": {"x": 128, "y": 128},
+            "pixelSize": {
+                "x": {"den": 1, "num": 3},
+                "y": {"den": 1, "num": 3},
+            },
+            "topLeft": {"x": {"den": 1, "num": 0}, "y": {"den": 1, "num": 0}},
+        },
+        "microscope": {"focus": None},
+    }
+    assert exp_mc_movie_metadata2 == act_mc_movie_metadata2
+
+    # motion correction quality control metadata
+    exp_mc_qc_metadata = {
+        "metrics": {
+            "min_x_rigid_shift": -0.0,
+            "max_x_rigid_shift": -0.0,
+            "min_y_rigid_shift": -0.1,
+            "max_y_rigid_shift": -0.0,
+            "min_x_pw_rigid_shift": -0.1,
+            "max_x_pw_rigid_shift": 0.1,
+            "min_y_pw_rigid_shift": -0.3,
+            "max_y_pw_rigid_shift": 0.2,
+            "num_patches": 9,
+        }
+    }
+    assert exp_mc_qc_metadata == act_mc_qc_metadata

@@ -109,32 +109,26 @@ def convert_caiman_output_to_isxd(
         return
     frame_index_cutoffs = [0] + list(np.cumsum(num_frames_per_movie))
 
-    # construct output filenames
-    cellset_denoised_filenames = [
-        f"cellset_denoised.{str(i).zfill(3)}.isxd"
-        for i in original_input_movie_indices
-    ]
-    cellset_raw_filenames = [
-        f"cellset_raw.{str(i).zfill(3)}.isxd"
-        for i in original_input_movie_indices
-    ]
-    eventset_filenames = [
-        f"neural_events.{str(i).zfill(3)}.isxd"
-        for i in original_input_movie_indices
-    ]
-
     # write cell sets and neural events to disk
-    for i, (
-        cellset_raw_filename,
-        cellset_denoised_filename,
-        eventset_filename,
-    ) in enumerate(
-        zip(
-            cellset_raw_filenames,
-            cellset_denoised_filenames,
-            eventset_filenames,
+    cellset_denoised_filenames = []
+    cellset_raw_filenames = []
+    eventset_filenames = []
+    for output_file_index, i in enumerate(original_input_movie_indices):
+        cellset_denoised_filename = (
+            f"cellset_denoised.{str(output_file_index).zfill(3)}.isxd"
         )
-    ):
+        cellset_denoised_filenames.append(cellset_denoised_filename)
+
+        cellset_raw_filename = (
+            f"cellset_raw.{str(output_file_index).zfill(3)}.isxd"
+        )
+        cellset_raw_filenames.append(cellset_raw_filename)
+
+        eventset_filename = (
+            f"neural_events.{str(output_file_index).zfill(3)}.isxd"
+        )
+        eventset_filenames.append(eventset_filename)
+
         denoised_cellset = isx.CellSet.write(
             cellset_denoised_filename, timing_info[i], spacing_info[i]
         )
@@ -261,7 +255,6 @@ def convert_caiman_output_to_isxd(
         cellset_denoised_filenames=cellset_denoised_filenames,
         eventset_filenames=eventset_filenames,
         original_input_indices=original_input_movie_indices,
-        global_cellset_filename=global_cellset_filename,
     )
 
     # generate metadata
@@ -349,16 +342,15 @@ def convert_memmap_data_to_output_files(
 
     frame_index_cutoffs = [0] + list(np.cumsum(num_frames_per_movie))
 
-    # construct output filenames
-    mc_movie_filenames = [
-        os.path.join(
-            output_dir, f"mc_movie.{str(i).zfill(3)}.{output_movie_format}"
-        )
-        for i in original_input_movie_indices
-    ]
-
     # write output movie files
-    for i, mc_movie_filename in enumerate(mc_movie_filenames):
+    mc_movie_filenames = []
+    for output_file_index, i in enumerate(original_input_movie_indices):
+        mc_movie_filename = os.path.join(
+            output_dir,
+            f"mc_movie.{str(output_file_index).zfill(3)}.{output_movie_format}",
+        )
+        mc_movie_filenames.append(mc_movie_filename)
+
         frame_indices = np.arange(
             frame_index_cutoffs[i], frame_index_cutoffs[i + 1]
         )
