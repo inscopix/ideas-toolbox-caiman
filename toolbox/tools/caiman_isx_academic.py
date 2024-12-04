@@ -753,6 +753,7 @@ def motion_correction(
         mc_obj=mot_correct,
         original_input_indices=original_input_movie_indices,
         frame_index_cutoffs=frame_index_cutoffs,
+        frame_rate=parameters.data.get("fr"),
     )
 
     # generate metadata

@@ -575,6 +575,7 @@ def generate_caiman_workflow_previews(
     cellset_denoised_filenames: List[str],
     eventset_filenames: List[str],
     original_input_indices: List[int],
+    global_cellset_filename: str,
     output_dir: str = None,
 ):
     """Generate previews for files produced by the CaImAn workflow.
@@ -583,6 +584,7 @@ def generate_caiman_workflow_previews(
     :param cellset_denoised_filenames: path to the denoised cell set files
     :param eventset_filenames: path to the event set files
     :param original_input_indices: original order of the input files prior to sorting
+    :param global_cellset_filename: path to the global cell set in which all traces are concatenated
     :param output_dir: path to the output directory
     """
     if output_dir is None:
@@ -622,6 +624,34 @@ def generate_caiman_workflow_previews(
             logger.warning(
                 f"Preview could not be generated for file '{os.path.basename(eventset_filenames[i])}': {str(e)}"
             )
+
+    # global cell set
+    try:
+        if len(cellset_raw_filenames) > 0:
+            individual_movie_start_indices = [0]
+            for f in cellset_raw_filenames:
+                cs = isx.CellSet.read(f)
+                individual_movie_start_indices.append(
+                    individual_movie_start_indices[-1] + cs.timing.num_samples
+                )
+            individual_movie_start_indices = individual_movie_start_indices[
+                1:-1
+            ]
+        else:
+            individual_movie_start_indices = None
+        generate_cell_set_previews(
+            cellset_filename=global_cellset_filename,
+            output_dir=output_dir,
+            vertical_line_indices=individual_movie_start_indices,
+        )
+    except Exception as e:
+        logger.warning(
+            f"Footprints and traces previews could not be generated for the CaImAn output data: {str(e)}"
+        )
+
+    # delete global cell set file
+    if os.path.exists(global_cellset_filename):
+        os.remove(global_cellset_filename)
 
 
 def _plot_rigid_shifts(mc_obj, vertical_line_indices=None):
@@ -699,6 +729,7 @@ def generate_caiman_motion_corrected_previews(
     mc_obj,
     original_input_indices: List[int],
     frame_index_cutoffs: List[int],
+    frame_rate: float,
     output_dir: str = None,
 ):
     """Generate previews for motion-corrected data produced by the CaImAn motion correction module.
@@ -706,6 +737,8 @@ def generate_caiman_motion_corrected_previews(
     :param mc_movie_filenames: path to the motion-corrected movie files
     :param mc_obj: CaImAn motion correction object
     :param original_input_indices: original order of the input files prior to sorting
+    :param frame_index_cutoffs: frame index cutoffs delineating the items in the series
+    :param frame_rate: frame rate to use for the movie previews
     :param output_dir: path to the output directory
     """
     if output_dir is None:
@@ -720,10 +753,19 @@ def generate_caiman_motion_corrected_previews(
             preview_filename = os.path.join(
                 output_dir, f"preview_{movie_basename}.mp4"
             )
-            generate_movie_preview(
-                input_filename=mc_movie_filenames[i],
-                preview_filename=preview_filename,
-            )
+
+            file_ext = os.path.splitext(mc_movie_filenames[0])[1][1:]
+            if file_ext.lower() in ["tiff", "tif"]:
+                generate_movie_preview(
+                    input_filename=mc_movie_filenames[i],
+                    preview_filename=preview_filename,
+                    preview_max_sampling_rate=frame_rate,
+                )
+            else:
+                generate_movie_preview(
+                    input_filename=mc_movie_filenames[i],
+                    preview_filename=preview_filename,
+                )
         except Exception as e:
             logger.warning(
                 f"Preview could not be generated for file '{os.path.basename(mc_movie_filenames[i])}': {str(e)}"

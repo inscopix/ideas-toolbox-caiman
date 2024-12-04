@@ -469,13 +469,13 @@ def generate_movie_metadata(
     if file_ext in ["isxd"]:
         isx_metadata = read_isxd_metadata(movie_filename)
         timing_info = isx_metadata["timingInfo"]
-        timing_info["sampling_rate"] = sampling_rate
+        timing_info["sampling_rate"] = float(np.round(sampling_rate, 2))
         spacing_info = isx_metadata["spacingInfo"]
     elif file_ext in ["tif", "tiff"]:
         image_stack = Image.open(movie_filename)
         timing_info = {
             "numTimes": image_stack.n_frames,
-            "sampling_rate": sampling_rate,
+            "sampling_rate": float(np.round(sampling_rate, 2)),
         }
         spacing_info = {
             "numPixels": {
@@ -488,7 +488,7 @@ def generate_movie_metadata(
         cap = cv2.VideoCapture(movie_filename)
         timing_info = {
             "numTimes": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
-            "sampling_rate": sampling_rate,
+            "sampling_rate": float(np.round(sampling_rate, 2)),
         }
         spacing_info = {
             "numPixels": {
