@@ -1045,9 +1045,9 @@
             "name": "NoRMCorre",
             "key": "caiman_isx_academic__motion_correction",
             "help": "NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.",
-            "version": "0.3.0",
+            "version": "1.0.0",
             "maturity": "production",
-            "visibility": "private",
+            "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
             "command": "caiman_isx_academic__motion_correction.sh",
             "resources": {
