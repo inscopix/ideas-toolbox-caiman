@@ -1,0 +1,39 @@
+{
+    "caiman_isx_academic__motion_correction": {
+        "mc_movie": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "mc_movie"
+        },
+        "preview_mc_movie": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "preview_mc_movie"
+        },
+        "mc_qc_data": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "mc_qc_data"
+        },
+        "preview_rigid_shifts": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "preview_rigid_shifts"
+        },
+        "preview_piecewise_rigid_shifts": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "preview_piecewise_rigid_shifts"
+        }
+    }
+}

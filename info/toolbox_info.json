@@ -1,0 +1,1561 @@
+{
+    "contributor": {
+        "tenant": "inscopix",
+        "user": ""
+    },
+    "details": {},
+    "exit_status": {
+        "codes": [
+            {
+                "code": "DEFAULT_TOOLBOX_ERROR_0001",
+                "description": "Placeholder error description",
+                "type": "ERROR"
+            }
+        ],
+        "file_location": "exit_status.txt"
+    },
+    "help": "Set of tools based on the open-source package CaImAn for the Inscopix IDEAS platform",
+    "key": "caiman",
+    "name": "CaImAn",
+    "schema_version": "2.0.0",
+    "tools": [
+        {
+            "name": "CaImAn Cell Extraction Workflow",
+            "key": "caiman_isx_academic__caiman_workflow",
+            "help": "The CaImAn cell identification workflow performs motion correction using the NoRMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.",
+            "version": "1.0.1",
+            "maturity": "production",
+            "visibility": "public",
+            "toolkit": "Calcium Imaging Processing",
+            "command": "caiman_isx_academic__caiman_workflow.sh",
+            "resources": {
+                "cpu": 8,
+                "gpu": 0,
+                "memory": 64000,
+                "storage": 100000,
+                "max_file_size": 20000
+            },
+            "params": [
+                {
+                    "key": "input_movie_files",
+                    "name": "Movie(s)",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Single movie file or movie series (isxd, tif, tiff, avi)",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "miniscope_movie",
+                                "file_structure": "movie",
+                                "file_format": "isxd"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tiff"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tif"
+                            },
+                            {
+                                "file_type": "movie",
+                                "file_structure": "movie",
+                                "file_format": "avi"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 0
+                        }
+                    }
+                },
+                {
+                    "key": "parameters_file",
+                    "name": "Optional Parameters File",
+                    "required": false,
+                    "hidden": false,
+                    "help": "JSON file containing CaImAn processing parameters",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": false,
+                        "file_formats": [
+                            "json"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "unknown",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            },
+                            {
+                                "file_type": "config",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 1
+                        }
+                    }
+                },
+                {
+                    "key": "overwrite_analysis_table_params",
+                    "name": "Overwrite Analysis Table Parameters",
+                    "required": true,
+                    "hidden": false,
+                    "help": "If True and a parameters file has been selected, the analysis table columns will be overwritten by the values contained in the parameters file.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Settings",
+                            "group_order": 0
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "fr",
+                    "name": "fr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Imaging rate in frames per second. If set to 'auto', the frame rate will be automatically determined based on file metadata. If no such metadata is available, CaImAn will default to 30 frames per second.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Dataset",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "decay_time",
+                    "name": "decay_time",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Length of a typical calcium transient in seconds",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Dataset",
+                            "group_order": 1
+                        },
+                        "min": 0
+                    },
+                    "default": 0.4
+                },
+                {
+                    "key": "dxy",
+                    "name": "dxy",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Spatial resolution of the field of view in pixels per um",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Dataset",
+                            "group_order": 2
+                        },
+                        "min": 0
+                    },
+                    "default": 1.0
+                },
+                {
+                    "key": "motion_correct",
+                    "name": "motion_correct",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, motion correction will be performed",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 0
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "pw_rigid",
+                    "name": "pw_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, piecewise-rigid motion correction will be performed. If False, rigid motion correction will be performed.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 1
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "gSig_filt",
+                    "name": "gSig_filt",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Size of the kernel used for high-pass spatial filtering of the data. If unspecified, no spatial filtering will be performed during motion correction. Applying a high-pass spatial filter may improve performance on 1P data by delineating edges and sharpening the images. Such filtering may not be needed for 2P data and could be left unspecified.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 2
+                        },
+                        "min": 1
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "max_shifts",
+                    "name": "max_shifts",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum shift per dimension in pixels during motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 3
+                        },
+                        "min": 0
+                    },
+                    "default": 5
+                },
+                {
+                    "key": "strides",
+                    "name": "strides",
+                    "required": false,
+                    "hidden": false,
+                    "help": "The stride controls the shift in pixels between patches of the field of view during piecewise-rigid registration",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 4
+                        },
+                        "min": 0
+                    },
+                    "default": 48
+                },
+                {
+                    "key": "overlaps",
+                    "name": "overlaps",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Overlap between patches in pixels during piecewise-rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 5
+                        },
+                        "min": 0
+                    },
+                    "default": 24
+                },
+                {
+                    "key": "max_deviation_rigid",
+                    "name": "max_deviation_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum deviation in pixels between rigid shifts and shifts of individual patches",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 6
+                        },
+                        "min": 0
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "border_nan",
+                    "name": "border_nan",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Strategy for handling NaN values along the boundaries. 'True' will allow NaN values along the boundaries, 'False' will replace any NaN with 0, 'copy' will replace any NaN with the value of the nearest data point, and 'min' will replace any NaN with the minimum value in the image.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Motion Correction",
+                            "group_order": 7
+                        },
+                        "choices": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "display_options": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "copy"
+                },
+                {
+                    "key": "p",
+                    "name": "p",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Order of the autoregressive model used to deconvolve the indicator temporal dynamics",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 0
+                        },
+                        "min": 0
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "K",
+                    "name": "K",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of components to be found per patch. If set to 'auto', the number of components will automatically be estimated. If 'rf' is unspecified (i.e. single patch), 'K' will correspond to the number of cells in the entire field of view.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 1
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "gSig",
+                    "name": "gSig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Radius of an average neuron in pixels",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 2
+                        },
+                        "min": 1
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "gSiz",
+                    "name": "gSiz",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Half-size of the bounding box for each neuron",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 3
+                        },
+                        "min": 1
+                    },
+                    "default": 7
+                },
+                {
+                    "key": "merge_thr",
+                    "name": "merge_thr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Trace correlation threshold for merging two components",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 4
+                        }
+                    },
+                    "default": 0.7
+                },
+                {
+                    "key": "rf",
+                    "name": "rf",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Half-size of a patch in pixels. If unspecified, the entire field of view will be processed as a single patch.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 5
+                        },
+                        "min": 1
+                    },
+                    "default": 40
+                },
+                {
+                    "key": "stride",
+                    "name": "stride",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Overlap between neighboring patches in pixels",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 6
+                        },
+                        "min": 0
+                    },
+                    "default": 20
+                },
+                {
+                    "key": "tsub",
+                    "name": "tsub",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Temporal downsampling factor",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 7
+                        },
+                        "min": 1
+                    },
+                    "default": 2
+                },
+                {
+                    "key": "ssub",
+                    "name": "ssub",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Spatial downsampling factor",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 8
+                        },
+                        "min": 1
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "method_init",
+                    "name": "method_init",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Method used for initializing cellular components. Use 'corr_pnr' for 1P data, 'greedy_roi' for 2P data, and 'sparse_NMF' for dendritic data.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 9
+                        },
+                        "choices": [
+                            "corr_pnr",
+                            "greedy_roi",
+                            "sparse_NMF",
+                            "local_NMF"
+                        ],
+                        "display_options": [
+                            "corr_pnr",
+                            "greedy_roi",
+                            "sparse_NMF",
+                            "local_NMF"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "corr_pnr"
+                },
+                {
+                    "key": "min_corr",
+                    "name": "min_corr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum value of the correlation image for identifying a candidate component during 'corr_pnr' initialization",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 10
+                        },
+                        "min": -1,
+                        "max": 1
+                    },
+                    "default": 0.85
+                },
+                {
+                    "key": "min_pnr",
+                    "name": "min_pnr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum value of the peak-to-noise-ratio (pnr) image for identifying a candidate component during 'corr_pnr' initialization",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 11
+                        }
+                    },
+                    "default": 12
+                },
+                {
+                    "key": "ssub_B",
+                    "name": "ssub_B",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Spatial downsampling factor to use when estimating the background activity during 'corr_pnr' initialization",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 12
+                        },
+                        "min": 1
+                    },
+                    "default": 2
+                },
+                {
+                    "key": "ring_size_factor",
+                    "name": "ring_size_factor",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Multiple of the radius of an average neuron (gSig) to use for computing the radius of the ring model used for estimating the background activity during 'corr_pnr' initialization",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 13
+                        },
+                        "min": 0
+                    },
+                    "default": 1.4
+                },
+                {
+                    "key": "method_deconvolution",
+                    "name": "method_deconvolution",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Method for solving the constrained deconvolution of temporal traces",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 14
+                        },
+                        "choices": [
+                            "oasis",
+                            "cvxpy"
+                        ],
+                        "display_options": [
+                            "oasis",
+                            "cvxpy"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "oasis"
+                },
+                {
+                    "key": "update_background_components",
+                    "name": "update_background_components",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, the spatial background components will be updated in each iteration of the algorithm",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 15
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "del_duplicates",
+                    "name": "del_duplicates",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, duplicate components in the overlapping regions between neighboring patches will be deleted. If False, a merging procedure will be used to determine whether the components are similar enough to be merged.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 16
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "nb",
+                    "name": "nb",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of global background components. Set to 0 for 1P data. A default value of 1 may be used for 2P data.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 17
+                        },
+                        "min": 0
+                    },
+                    "default": 0
+                },
+                {
+                    "key": "low_rank_background",
+                    "name": "low_rank_background",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, the background will be updated using low-rank approximation. If False, all nonzero elements of the background components will be updated using the Hierarchical Alternating Least Squares (HALS) algorithm. Set to False for 1P data and True for 2P data.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 18
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "nb_patch",
+                    "name": "nb_patch",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of local background components per patch. Set to 0 for 1P data. A default value of 1 may be used for 2P data.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 19
+                        },
+                        "min": 0
+                    },
+                    "default": 0
+                },
+                {
+                    "key": "rolling_sum",
+                    "name": "rolling_sum",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, a rolling sum will be used for determining candidate centroids during 'greedy_roi' initialization. If False, a full sum will be used.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 20
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "only_init",
+                    "name": "only_init",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, the values after initialization will be returned",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 21
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "normalize_init",
+                    "name": "normalize_init",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, pixel values will be normalized by their respective median intensity across the input movies",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 22
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "center_psf",
+                    "name": "center_psf",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, merge overlapping components by taking the best neuron. Set to True for 1P data and False for 2P data.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 23
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "bas_nonneg",
+                    "name": "bas_nonneg",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, a non-negative baseline will be used. If False, the baseline will be greater than or equal to the minimum value, which could be negative.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 24
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "border_pix",
+                    "name": "border_pix",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of pixels to exclude around each border",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 25
+                        },
+                        "min": 0
+                    },
+                    "default": 0
+                },
+                {
+                    "key": "refit",
+                    "name": "refit",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, the initial estimates will be refined by re-running the CNMF algorithm seeded on the spatial estimates from the previous step",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Cell Extraction",
+                            "group_order": 26
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "SNR_lowest",
+                    "name": "SNR_lowest",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum signal-to-noise ratio required for a trace to be accepted. Traces with a signal-to-noise ratio below this will be rejected",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 0
+                        }
+                    },
+                    "default": 0.5
+                },
+                {
+                    "key": "min_SNR",
+                    "name": "min_SNR",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Trace signal-to-noise ratio threshold. Traces with signal-to-noise ratios above this will be accepted",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 1
+                        }
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "rval_lowest",
+                    "name": "rval_lowest",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum spatial correlation required for a component to be accepted. Components with spatial correlation below this will be rejected",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 2
+                        }
+                    },
+                    "default": -1
+                },
+                {
+                    "key": "rval_thr",
+                    "name": "rval_thr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Spatial correlation threshold. Components with spatial correlation higher than this will be accepted",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 3
+                        }
+                    },
+                    "default": 0.85
+                },
+                {
+                    "key": "use_cnn",
+                    "name": "use_cnn",
+                    "required": true,
+                    "hidden": false,
+                    "help": "If True, a pretrained convolutional neural network (CNN) will be used for accepting/rejecting components. The model was trained on 2P data and may not be applicable to 1P data.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 4
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "cnn_lowest",
+                    "name": "cnn_lowest",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum CNN classifier score required to accept components. Components with scores lower than this will be rejected",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 5
+                        }
+                    },
+                    "default": 0.1
+                },
+                {
+                    "key": "gSig_range",
+                    "name": "gSig_range",
+                    "required": false,
+                    "hidden": false,
+                    "help": "List of neuron sizes to compare when using the CNN classifier. If unspecified, the CNN classifier will be applied using a neuron size equal to 'gSig'. If multiple values are provided, the CNN classifier will be tested will each one and the predictions of the best-performing run returned.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 6
+                        }
+                    }
+                },
+                {
+                    "key": "min_cnn_thr",
+                    "name": "min_cnn_thr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "CNN classifier score threshold. Components with scores higher than this will be accepted",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Component Evaluation",
+                            "group_order": 7
+                        }
+                    },
+                    "default": 0.9
+                },
+                {
+                    "key": "n_processes",
+                    "name": "n_processes",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of processes used to analyze patches in parallel",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Patches",
+                            "group_order": 0
+                        },
+                        "min": 1
+                    },
+                    "default": 7
+                }
+            ],
+            "results": [
+                {
+                    "group_key": "caiman_isx_academic__caiman_workflow",
+                    "group_name": "CaImAn Cell Extraction Workflow Output Group",
+                    "group_type": "tool_output",
+                    "required": true,
+                    "multiple": false,
+                    "files": [
+                        {
+                            "result_key": "caiman_output",
+                            "result_name": "CaImAn Output",
+                            "help": "Caiman output",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "hdf5"
+                            ],
+                            "file_type": "caiman_data"
+                        },
+                        {
+                            "result_key": "cellset_raw",
+                            "result_name": "Raw Cell Set(s)",
+                            "help": "Raw cell set(s)",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "cell_set"
+                        },
+                        {
+                            "result_key": "cellset_denoised",
+                            "result_name": "Denoised Cell Set(s)",
+                            "help": "Denoised cell set(s)",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "cell_set"
+                        },
+                        {
+                            "result_key": "neural_events",
+                            "result_name": "Neural Events",
+                            "help": "Neural events",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "neural_events"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "NoRMCorre",
+            "key": "caiman_isx_academic__motion_correction",
+            "help": "NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.",
+            "version": "1.0.1",
+            "maturity": "production",
+            "visibility": "public",
+            "toolkit": "Calcium Imaging Processing",
+            "command": "caiman_isx_academic__motion_correction.sh",
+            "resources": {
+                "cpu": 8,
+                "gpu": 0,
+                "memory": 64000,
+                "storage": 100000,
+                "max_file_size": 20000
+            },
+            "params": [
+                {
+                    "key": "input_movie_files",
+                    "name": "Movie(s)",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Single movie file or movie series (isxd, tif, tiff, avi)",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "miniscope_movie",
+                                "file_structure": "movie",
+                                "file_format": "isxd"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tiff"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image_stack",
+                                "file_format": "tif"
+                            },
+                            {
+                                "file_type": "movie",
+                                "file_structure": "movie",
+                                "file_format": "avi"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 0
+                        }
+                    }
+                },
+                {
+                    "key": "parameters_file",
+                    "name": "Optional Parameters File",
+                    "required": false,
+                    "hidden": false,
+                    "help": "JSON file containing CaImAn processing parameters",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": false,
+                        "file_formats": [
+                            "json"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "unknown",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            },
+                            {
+                                "file_type": "config",
+                                "file_structure": "unknown",
+                                "file_format": "json"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 1
+                        }
+                    }
+                },
+                {
+                    "key": "overwrite_analysis_table_params",
+                    "name": "Overwrite Analysis Table Parameters",
+                    "required": true,
+                    "hidden": false,
+                    "help": "If True and a parameters file has been selected, the analysis table columns will be overwritten by the values contained in the parameters file.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Settings",
+                            "group_order": 0
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "fr",
+                    "name": "fr",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Imaging rate in frames per second. If set to 'auto', the frame rate will be automatically determined based on file metadata. If no such metadata is available, CaImAn will default to 30 frames per second.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Dataset",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "min_mov",
+                    "name": "min_mov",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Estimated minimum pixel value in the input movie. When set to 'auto', it will automatically be estimated using the first 400 frames. This value will be used to construct a non-negative output.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "shifts_opencv",
+                    "name": "shifts_opencv",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, bicubic interpolation will be used for correcting motion. If False, Fourier transform interpolation will be used.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 1
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "nonneg_movie",
+                    "name": "nonneg_movie",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, 'min_mov' will be removed from the data to produce an output movie and template that are mostly non-negative.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 2
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "gSig_filt",
+                    "name": "gSig_filt",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Size of the kernel used for high-pass spatial filtering of the data. If unspecified, no spatial filtering will be performed during motion correction. Applying a high-pass spatial filter may improve performance on 1P data by delineating edges and sharpening the images. Such filtering may not be needed for 2P data and could be left unspecified.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 3
+                        },
+                        "min": 1
+                    }
+                },
+                {
+                    "key": "border_nan",
+                    "name": "border_nan",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Strategy for handling NaN values along the boundaries. 'True' will allow NaN values along the boundaries, 'False' will replace any NaN with 0, 'copy' will replace any NaN with the value of the nearest data point, and 'min' will replace any NaN with the minimum value in the image.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 4
+                        },
+                        "choices": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "display_options": [
+                            "copy",
+                            "min",
+                            "True",
+                            "False"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "copy"
+                },
+                {
+                    "key": "num_frames_split",
+                    "name": "num_frames_split",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of frames in each batch when splitting the movie for parallel processing",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 5
+                        }
+                    },
+                    "default": 80
+                },
+                {
+                    "key": "is3D",
+                    "name": "is3D",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Set to True if the input data consists of a 3D recording",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "General",
+                            "group_order": 6
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "max_shifts",
+                    "name": "max_shifts",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum rigid shift per dimension in pixels",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 0
+                        }
+                    },
+                    "default": 6
+                },
+                {
+                    "key": "niter_rig",
+                    "name": "niter_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum number of iterations during rigid motion correction. If set to 0, it will quickly initialize a template with the first frame of the movie.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 1
+                        },
+                        "min": 0
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "splits_rig",
+                    "name": "splits_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of temporal chunks to use for parallelizing rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 2
+                        }
+                    },
+                    "default": 14
+                },
+                {
+                    "key": "num_splits_to_process_rig",
+                    "name": "num_splits_to_process_rig",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Specifies the number of temporal chunks to process in each iteration. If left unspecified, all chunks will be processed at once.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Rigid",
+                            "group_order": 3
+                        }
+                    }
+                },
+                {
+                    "key": "pw_rigid",
+                    "name": "pw_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, piecewise-rigid motion correction will be performed. If False, rigid motion correction will be performed.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 0
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "strides",
+                    "name": "strides",
+                    "required": false,
+                    "hidden": false,
+                    "help": "The stride controls the shift in pixels between patches of the field of view during piecewise-rigid registration",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 1
+                        }
+                    },
+                    "default": 48
+                },
+                {
+                    "key": "overlaps",
+                    "name": "overlaps",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Overlap between patches in pixels during piecewise-rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 2
+                        }
+                    },
+                    "default": 24
+                },
+                {
+                    "key": "splits_els",
+                    "name": "splits_els",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of temporal chunks to use for parallelizing piecewise-rigid motion correction",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 3
+                        }
+                    },
+                    "default": 14
+                },
+                {
+                    "key": "upsample_factor_grid",
+                    "name": "upsample_factor_grid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Upsampling factor to use for per-patch shifts to avoid smearing when merging patches",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 4
+                        }
+                    },
+                    "default": 4
+                },
+                {
+                    "key": "max_deviation_rigid",
+                    "name": "max_deviation_rigid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum deviation in pixels between rigid shifts and shifts of individual patches",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Piecewise Rigid",
+                            "group_order": 4
+                        }
+                    },
+                    "default": 3
+                },
+                {
+                    "key": "n_processes",
+                    "name": "n_processes",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of processes used to analyze patches in parallel",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Patches",
+                            "group_order": 0
+                        },
+                        "min": 1
+                    },
+                    "default": 7
+                },
+                {
+                    "key": "output_movie_format",
+                    "name": "Output Movie Format",
+                    "required": false,
+                    "hidden": false,
+                    "help": "File format to use when saving the output motion-corrected movie. If set to 'auto', the file format will match the input files.",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Output Settings",
+                            "group_order": 0
+                        },
+                        "choices": [
+                            "auto",
+                            "isxd",
+                            "tiff",
+                            "avi"
+                        ],
+                        "display_options": [
+                            "auto",
+                            "isxd",
+                            "tiff",
+                            "avi"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "auto"
+                }
+            ],
+            "results": [
+                {
+                    "group_key": "caiman_isx_academic__motion_correction",
+                    "group_name": "CaImAn Motion Correction Output Group",
+                    "group_type": "tool_output",
+                    "required": true,
+                    "multiple": false,
+                    "files": [
+                        {
+                            "result_key": "mc_movie",
+                            "result_name": "Motion-Corrected Movie(s)",
+                            "help": "Motion-corrected movie",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd",
+                                "tiff",
+                                "tif",
+                                "avi"
+                            ],
+                            "file_type": "miniscope_movie"
+                        },
+                        {
+                            "result_key": "mc_qc_data",
+                            "result_name": "Motion Correction Quality Assessment",
+                            "help": "Motion correction quality assessment data",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "csv"
+                            ],
+                            "file_type": "motion_correction_qc_data"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "version": "1.0.0"
+}
