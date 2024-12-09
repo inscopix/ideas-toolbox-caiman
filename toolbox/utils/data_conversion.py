@@ -256,6 +256,7 @@ def convert_caiman_output_to_isxd(
         eventset_filenames=eventset_filenames,
         original_input_indices=original_input_movie_indices,
         global_cellset_filename=global_cellset_filename,
+        input_movie_files=input_movie_files,
     )
 
     # generate metadata

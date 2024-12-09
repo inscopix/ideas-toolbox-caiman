@@ -576,6 +576,7 @@ def generate_caiman_workflow_previews(
     eventset_filenames: List[str],
     original_input_indices: List[int],
     global_cellset_filename: str,
+    input_movie_files: List[str],
     output_dir: str = None,
 ):
     """Generate previews for files produced by the CaImAn workflow.
@@ -585,6 +586,7 @@ def generate_caiman_workflow_previews(
     :param eventset_filenames: path to the event set files
     :param original_input_indices: original order of the input files prior to sorting
     :param global_cellset_filename: path to the global cell set in which all traces are concatenated
+    :param input_movie_files: list of paths to the input movie files
     :param output_dir: path to the output directory
     """
     if output_dir is None:
@@ -627,12 +629,12 @@ def generate_caiman_workflow_previews(
 
     # global cell set
     try:
-        if len(cellset_raw_filenames) > 0:
+        if len(input_movie_files) > 0:
             individual_movie_start_indices = [0]
-            for f in cellset_raw_filenames:
-                cs = isx.CellSet.read(f)
+            for f in input_movie_files:
+                m = isx.Movie.read(f)
                 individual_movie_start_indices.append(
-                    individual_movie_start_indices[-1] + cs.timing.num_samples
+                    individual_movie_start_indices[-1] + m.timing.num_samples
                 )
             individual_movie_start_indices = individual_movie_start_indices[
                 1:-1
