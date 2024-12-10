@@ -9,12 +9,12 @@ if os.path.isfile("user_deps.txt"):
         install_requires = f.read().splitlines()
 
 setup(
-    name="ideas-toolbox-idl-neural-processing",
+    name="ideas-toolbox-caiman",
     python_requires=">=3.9",
     version="1.0.0",
     packages=[],
     description="",
-    url="https://github.com/inscopix/ideas-toolbox-idl-neural-processing",
+    url="https://github.com/inscopix/ideas-toolbox-caiman",
     install_requires=[
         f"ideas-python-utils@git+https://{token}@github.com/inscopix/ideas-python-utils.git@10.10.0",
         f"ideas-commons@git+https://{token}@github.com/inscopix/ideas-commons.git@1.25.0",
