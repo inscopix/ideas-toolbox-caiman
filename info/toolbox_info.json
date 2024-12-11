@@ -23,7 +23,7 @@
             "name": "CaImAn Cell Extraction Workflow",
             "key": "caiman_isx_academic__caiman_workflow",
             "help": "The CaImAn cell identification workflow performs motion correction using the NoRMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
