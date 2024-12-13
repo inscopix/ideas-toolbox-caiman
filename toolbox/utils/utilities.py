@@ -314,7 +314,7 @@ def movie_series(files: List[str]) -> List[str]:
         )
 
     for i in range(len(files)):
-        if not np.isclose(periods[0], periods[i]):
+        if not np.isclose(periods[0], periods[i], atol=1e-6):
             raise Exception(
                 f"""[INVALID SERIES] The input files do 
             not form a valid movie series. 
