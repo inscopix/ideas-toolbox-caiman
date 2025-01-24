@@ -239,8 +239,12 @@ def convert_caiman_output_to_isxd(
     global_cellset.flush()
 
     # update cell statuses
-    cell_statuses = np.array(["accepted" for _ in range(num_cells)])
-    cell_statuses[model.estimates.idx_components_bad] = "rejected"
+    cell_statuses = np.array(["undecided" for _ in range(num_cells)])
+    if model.estimates.idx_components is not None:
+        cell_statuses[model.estimates.idx_components] = "accepted"
+    if model.estimates.idx_components_bad is not None:
+        cell_statuses[model.estimates.idx_components_bad] = "rejected"
+
     write_cell_statuses(
         cell_statuses=cell_statuses,
         cell_set_filenames=cellset_raw_filenames

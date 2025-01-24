@@ -1,0 +1,5 @@
+{
+    "input_movie_files": ["/ideas/data/movie_part1_108x123x100.isxd"],
+    "min_corr": 0.5,
+    "min_pnr": 5
+}

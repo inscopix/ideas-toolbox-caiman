@@ -34,7 +34,7 @@ import logging
 logger = logging.getLogger()
 
 
-def caiman_workflow(
+def _run_caiman_workflow(
     *,
     # Input Files
     input_movie_files: List[str],
@@ -82,6 +82,7 @@ def caiman_workflow(
     border_pix: int = 0,
     refit: bool = False,
     # Component Evaluation
+    evaluate_components: bool = True,
     SNR_lowest: float = 0.5,
     min_SNR: float = 3,
     rval_lowest: float = -1,
@@ -168,8 +169,6 @@ def caiman_workflow(
     PATCHES
     :param n_processes: Number of processes used for processing patches in parallel
     """
-    logger.info("CaImAn cell extraction workflow started")
-
     # set output directory
     output_dir = os.getcwd()
 
@@ -422,14 +421,18 @@ def caiman_workflow(
     correlation_image = generate_initialization_images_preview(images=images)
 
     # perform automated component evaluation
-    model.estimates.evaluate_components(images, model.params, dview=cluster)
+    if evaluate_components:
+        model.estimates.evaluate_components(
+            images, model.params, dview=cluster
+        )
+        logger.info(
+            f"Number of accepted cells: {len(model.estimates.idx_components)}"
+        )
+        logger.info(
+            f"Number of rejected cells: {len(model.estimates.idx_components_bad)}"
+        )
+
     logger.info(f"Total number of cells identified: {len(model.estimates.C)}")
-    logger.info(
-        f"Number of accepted cells: {len(model.estimates.idx_components)}"
-    )
-    logger.info(
-        f"Number of rejected cells: {len(model.estimates.idx_components_bad)}"
-    )
 
     # add correlation image to output file
     if "correlation_image" in locals():
@@ -460,6 +463,204 @@ def caiman_workflow(
 
     logger.info("Stopping computing cluster")
     cm.stop_server(dview=cluster)
+
+
+def caiman_workflow(
+    *,
+    # Input Files
+    input_movie_files: List[str],
+    parameters_file: Optional[List[str]] = None,
+    overwrite_analysis_table_params: bool = False,
+    # Dataset
+    fr: str = "auto",
+    decay_time: float = 0.4,
+    dxy: float = 1.0,
+    # Motion Correction
+    motion_correct: bool = True,
+    pw_rigid: bool = False,
+    gSig_filt: Optional[int] = None,
+    max_shifts: int = 5,
+    strides: int = 48,
+    overlaps: int = 24,
+    max_deviation_rigid: int = 3,
+    border_nan: str = "copy",
+    # Cell Extraction
+    p: int = 1,
+    K: str = "auto",
+    gSig: int = 3,
+    gSiz: int = 7,
+    merge_thr: float = 0.7,
+    rf: int = 40,
+    stride: int = 20,
+    tsub: int = 2,
+    ssub: int = 1,
+    method_init: str = "corr_pnr",
+    min_corr: float = 0.85,
+    min_pnr: float = 12,
+    ssub_B: int = 2,
+    ring_size_factor: float = 1.4,
+    method_deconvolution: str = "oasis",
+    update_background_components: bool = True,
+    del_duplicates: bool = True,
+    nb: int = 0,
+    low_rank_background: bool = False,
+    nb_patch: int = 0,
+    rolling_sum: bool = True,
+    only_init: bool = True,
+    normalize_init: bool = False,
+    center_psf: bool = True,
+    bas_nonneg: bool = False,
+    border_pix: int = 0,
+    refit: bool = False,
+    # Component Evaluation
+    SNR_lowest: float = 0.5,
+    min_SNR: float = 3,
+    rval_lowest: float = -1,
+    rval_thr: float = 0.85,
+    use_cnn: bool = False,
+    cnn_lowest: float = 0.1,
+    gSig_range: str = None,
+    min_cnn_thr: float = 0.9,
+    # Patches
+    n_processes: int = 7,
+):
+    """Run CaImAn cell extraction workflow.
+
+     Steps:
+        1. Motion correction using the NorMCorre algorithm
+        2. Cell identification using the CNMF/CNMF-E algorithm
+        3. Automated cell classification
+
+    INPUT FILES
+    :param input_movie_files: list of paths to the input movie files (isxd, tif, tiff, avi)
+    :param parameters_file: path to the json parameters file
+
+    SETTINGS
+    :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
+                                            will be overwritten by the values specified in the parameters file
+
+    DATASET
+    :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
+    :param decay_time: length of typical transient in seconds
+    :param dxy: spatial resolution of FOV in pixels per um
+
+    MOTION CORRECTION
+    :param motion_correct: If True, motion correction will be performed
+    :param pw_rigid: If True, piecewise-rigid motion correction will be performed
+    :param gSig_filt: size of kernel for high pass spatial filtering in 1p data.
+                      If None no spatial filtering is performed
+    :param max_shifts: maximum shifts during motion correction
+    :param strides: how often to start a new patch in pw-rigid registration
+    :param overlaps: overlap between patches in pixels in pw-rigid motion correction
+    :param max_deviation_rigid: maximum deviation in pixels between rigid shifts and
+                                shifts of individual patches
+    :param border_nan: flag for allowing NaN in the boundaries. True allows NaN, whereas 'copy' copies
+                       the value of the nearest data point
+
+    CELL EXTRACTION
+    :param p: order of AR indicator dynamics
+    :param K: number of components to be found (per patch or whole FOV depending on whether rf=None) (If set to 'auto', it will be automatically estimated)
+    :param gSig: radius of average neurons (in pixels)
+    :param gSiz: half-size of bounding box for each neuron
+    :param merge_thr: Trace correlation threshold for merging two components
+    :param rf: Half-size of patch in pixels
+    :param stride: Overlap between neighboring patches in pixels
+    :param tsub: temporal downsampling factor
+    :param ssub: spatial downsampling factor
+    :param method_init: initialization method
+    :param min_corr: minimum value of correlation image for determining a candidate component during corr_pnr
+    :param min_pnr: minimum value of pnr image for determining a candidate component during corr_pnr
+    :param ssub_B: downsampling factor for background during corr_pnr
+    :param ring_size_factor: radius of ring (*gSig) for computing background during corr_pnr
+    :param method_deconvolution: method for solving the constrained deconvolution problem
+    :param update_background_components: whether to update the spatial background components
+    :param del_duplicates: Delete duplicate components in the overlapping regions between neighboring patches. If False, then merging is used.
+    :param nb: number of background components
+    :param low_rank_background: Whether to update the background using a low rank approximation. If False all the nonzero elements of the background components are updated using hal (to be used with one background per patch)
+    :param nb_patch: Number of (local) background components per patch
+    :param rolling_sum: use rolling sum (as opposed to full sum) for determining candidate centroids during greedy_roi
+    :param only_init: whether to run only the initialization
+    :param normalize_init: whether to equalize the movies during initialization
+    :param center_psf: whether to use 1p data processing mode. Set to true for 1p
+    :param bas_nonneg: whether to set a non-negative baseline (otherwise b >= min(y))
+    :param border_pix: Number of pixels to exclude around each border
+    :param refit: if True, the initial estimates will be refined by re-running the CNMF algorithm seeded just on the spatial estimates from the previous step
+
+    COMPONENT EVALUATION
+    :param SNR_lowest: minimum required trace SNR. Traces with SNR below this will get rejected
+    :param min_SNR: trace SNR threshold. Traces with SNR above this will get accepted
+    :param rval_lowest: minimum required space correlation. Components with correlation below this will get rejected
+    :param rval_thr: space correlation threshold. Components with correlation higher than this will get accepted
+    :param use_cnn: flag for using the CNN classifier
+    :param cnn_lowest: minimum required CNN threshold. Components with score lower than this will get rejected
+    :param gSig_range: gSig scale values for CNN classifier. In not None, multiple values are tested in the CNN classifier.
+    :param min_cnn_thr: CNN classifier threshold. Components with score higher than this will get accepted
+
+    PATCHES
+    :param n_processes: Number of processes used for processing patches in parallel
+    """
+    logger.info("CaImAn cell extraction workflow started")
+
+    _run_caiman_workflow(
+        # Input Data
+        input_movie_files=input_movie_files,
+        parameters_file=parameters_file,
+        overwrite_analysis_table_params=overwrite_analysis_table_params,
+        # Dataset
+        fr=fr,
+        decay_time=decay_time,
+        dxy=dxy,
+        # Motion Correction
+        motion_correct=motion_correct,
+        pw_rigid=pw_rigid,
+        gSig_filt=gSig_filt,
+        max_shifts=max_shifts,
+        strides=strides,
+        overlaps=overlaps,
+        max_deviation_rigid=max_deviation_rigid,
+        border_nan=border_nan,
+        # Cell Extraction
+        p=p,
+        K=K,
+        gSig=gSig,
+        gSiz=gSiz,
+        merge_thr=merge_thr,
+        rf=rf,
+        stride=stride,
+        tsub=tsub,
+        ssub=ssub,
+        method_init=method_init,
+        min_corr=min_corr,
+        min_pnr=min_pnr,
+        ssub_B=ssub_B,
+        ring_size_factor=ring_size_factor,
+        method_deconvolution=method_deconvolution,
+        update_background_components=update_background_components,
+        del_duplicates=del_duplicates,
+        nb=nb,
+        low_rank_background=low_rank_background,
+        nb_patch=nb_patch,
+        rolling_sum=rolling_sum,
+        only_init=only_init,
+        normalize_init=normalize_init,
+        center_psf=center_psf,
+        bas_nonneg=bas_nonneg,
+        border_pix=border_pix,
+        refit=refit,
+        # Component Evaluation
+        evaluate_components=True,
+        SNR_lowest=SNR_lowest,
+        min_SNR=min_SNR,
+        rval_lowest=rval_lowest,
+        rval_thr=rval_thr,
+        use_cnn=use_cnn,
+        cnn_lowest=cnn_lowest,
+        gSig_range=gSig_range,
+        min_cnn_thr=min_cnn_thr,
+        # Patches
+        n_processes=n_processes,
+    )
+
     logger.info("CaImAn cell extraction workflow completed")
 
 
@@ -769,3 +970,141 @@ def motion_correction(
     logger.info("Stopping computing cluster")
     cm.stop_server(dview=cluster)
     logger.info("CaImAn motion correction completed")
+
+
+def source_extraction(
+    *,
+    # Input Files
+    input_movie_files: List[str],
+    parameters_file: Optional[List[str]] = None,
+    overwrite_analysis_table_params: bool = False,
+    # Dataset
+    fr: str = "auto",
+    decay_time: float = 0.4,
+    dxy: float = 1.0,
+    # Cell Extraction
+    p: int = 1,
+    K: str = "auto",
+    gSig: int = 3,
+    gSiz: int = 7,
+    merge_thr: float = 0.7,
+    rf: int = 40,
+    stride: int = 20,
+    tsub: int = 2,
+    ssub: int = 1,
+    method_init: str = "corr_pnr",
+    min_corr: float = 0.85,
+    min_pnr: float = 12,
+    ssub_B: int = 2,
+    ring_size_factor: float = 1.4,
+    method_deconvolution: str = "oasis",
+    update_background_components: bool = True,
+    del_duplicates: bool = True,
+    nb: int = 0,
+    low_rank_background: bool = False,
+    nb_patch: int = 0,
+    rolling_sum: bool = True,
+    only_init: bool = True,
+    normalize_init: bool = False,
+    center_psf: bool = True,
+    bas_nonneg: bool = False,
+    border_pix: int = 0,
+    refit: bool = False,
+    # Patches
+    n_processes: int = 7,
+):
+    """Run CaImAn CNMF/CNMF-E source extraction.
+
+    INPUT FILES
+    :param input_movie_files: list of paths to the input movie files (isxd, tif, tiff, avi)
+    :param parameters_file: path to the json parameters file
+
+    SETTINGS
+    :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
+                                            will be overwritten by the values specified in the parameters file
+
+    DATASET
+    :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
+    :param decay_time: length of typical transient in seconds
+    :param dxy: spatial resolution of FOV in pixels per um
+
+    CELL EXTRACTION
+    :param p: order of AR indicator dynamics
+    :param K: number of components to be found (per patch or whole FOV depending on whether rf=None) (If set to 'auto', it will be automatically estimated)
+    :param gSig: radius of average neurons (in pixels)
+    :param gSiz: half-size of bounding box for each neuron
+    :param merge_thr: Trace correlation threshold for merging two components
+    :param rf: Half-size of patch in pixels
+    :param stride: Overlap between neighboring patches in pixels
+    :param tsub: temporal downsampling factor
+    :param ssub: spatial downsampling factor
+    :param method_init: initialization method
+    :param min_corr: minimum value of correlation image for determining a candidate component during corr_pnr
+    :param min_pnr: minimum value of pnr image for determining a candidate component during corr_pnr
+    :param ssub_B: downsampling factor for background during corr_pnr
+    :param ring_size_factor: radius of ring (*gSig) for computing background during corr_pnr
+    :param method_deconvolution: method for solving the constrained deconvolution problem
+    :param update_background_components: whether to update the spatial background components
+    :param del_duplicates: Delete duplicate components in the overlapping regions between neighboring patches. If False, then merging is used.
+    :param nb: number of background components
+    :param low_rank_background: Whether to update the background using a low rank approximation. If False all the nonzero elements of the background components are updated using hal (to be used with one background per patch)
+    :param nb_patch: Number of (local) background components per patch
+    :param rolling_sum: use rolling sum (as opposed to full sum) for determining candidate centroids during greedy_roi
+    :param only_init: whether to run only the initialization
+    :param normalize_init: whether to equalize the movies during initialization
+    :param center_psf: whether to use 1p data processing mode. Set to true for 1p
+    :param bas_nonneg: whether to set a non-negative baseline (otherwise b >= min(y))
+    :param border_pix: Number of pixels to exclude around each border
+    :param refit: if True, the initial estimates will be refined by re-running the CNMF algorithm seeded just on the spatial estimates from the previous step
+
+    PATCHES
+    :param n_processes: Number of processes used for processing patches in parallel
+    """
+    logger.info("CaImAn source extraction started")
+
+    _run_caiman_workflow(
+        # Input Data
+        input_movie_files=input_movie_files,
+        parameters_file=parameters_file,
+        overwrite_analysis_table_params=overwrite_analysis_table_params,
+        # Dataset
+        fr=fr,
+        decay_time=decay_time,
+        dxy=dxy,
+        # Motion Correction
+        motion_correct=False,
+        # Cell Extraction
+        p=p,
+        K=K,
+        gSig=gSig,
+        gSiz=gSiz,
+        merge_thr=merge_thr,
+        rf=rf,
+        stride=stride,
+        tsub=tsub,
+        ssub=ssub,
+        method_init=method_init,
+        min_corr=min_corr,
+        min_pnr=min_pnr,
+        ssub_B=ssub_B,
+        ring_size_factor=ring_size_factor,
+        method_deconvolution=method_deconvolution,
+        update_background_components=update_background_components,
+        del_duplicates=del_duplicates,
+        nb=nb,
+        low_rank_background=low_rank_background,
+        nb_patch=nb_patch,
+        rolling_sum=rolling_sum,
+        only_init=only_init,
+        normalize_init=normalize_init,
+        center_psf=center_psf,
+        bas_nonneg=bas_nonneg,
+        border_pix=border_pix,
+        refit=refit,
+        # Component Evaluation
+        evaluate_components=False,
+        # Patches
+        n_processes=n_processes,
+    )
+
+    logger.info("CaImAn source extraction completed")

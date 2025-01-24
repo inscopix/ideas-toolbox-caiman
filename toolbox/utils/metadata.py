@@ -364,13 +364,23 @@ def generate_caiman_output_metadata(
     """
     model = load_CNMF(caiman_output_filename)
     num_cells = len(model.estimates.C)
-    num_accepted_cells = len(model.estimates.idx_components)
-    num_rejected_cells = len(model.estimates.idx_components_bad)
+    num_accepted_cells = (
+        len(model.estimates.idx_components)
+        if model.estimates.idx_components is not None
+        else 0
+    )
+    num_rejected_cells = (
+        len(model.estimates.idx_components_bad)
+        if model.estimates.idx_components_bad is not None
+        else 0
+    )
 
     output_metadata = {
         "metrics": {
             "num_accepted_cells": num_accepted_cells,
-            "num_undecided_cells": 0,
+            "num_undecided_cells": num_cells
+            - num_accepted_cells
+            - num_rejected_cells,
             "num_rejected_cells": num_rejected_cells,
             "total_num_cells": num_cells,
         },
