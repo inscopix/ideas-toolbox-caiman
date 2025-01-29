@@ -610,3 +610,55 @@ def generate_caiman_motion_correction_metadata(
     output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
     with open(output_metadata_filename, "w") as f:
         json.dump(metadata, f, indent=4)
+
+
+def generate_caiman_spike_extraction_metadata(
+    cellset_denoised_filenames: List[str],
+    eventset_filenames: List[str],
+    original_input_indices: List[int],
+    input_cellset_files: List[str],
+    output_dir: str = None,
+):
+    """Generate metadata for files produced by CaImAn spike extraction.
+
+    :param cellset_denoised_filenames: path to the denoised cell set files
+    :param eventset_filenames: path to the event set files
+    :param original_input_indices: original order of the input files prior to sorting
+    :param input_cellset_files: list of input cellset file paths
+    :param output_dir: path to the output directory
+    """
+    if output_dir is None:
+        output_dir = os.getcwd()
+
+    metadata = {}
+
+    # extract e-focus values from input cell sets if available
+    efocus_vals = [None] * len(input_cellset_files)
+    for i, f in enumerate(input_cellset_files):
+        try:
+            if f.lower().endswith(".isxd"):
+                efocus_vals[i] = get_efocus(f)
+        except Exception:
+            pass
+
+    for output_file_index, i in enumerate(original_input_indices):
+        # denoised cell set metadata
+        generate_cell_set_metadata(
+            cellset_filename=cellset_denoised_filenames[output_file_index],
+            file_key=f"cellset_denoised.{str(output_file_index).zfill(3)}",
+            metadata=metadata,
+            efocus_vals=efocus_vals[i],
+        )
+
+        # event set metadata
+        generate_event_set_metadata(
+            eventset_filename=eventset_filenames[output_file_index],
+            file_key=f"neural_events.{str(output_file_index).zfill(3)}",
+            metadata=metadata,
+            efocus_vals=efocus_vals[i],
+        )
+
+    # save metadata to file
+    output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
+    with open(output_metadata_filename, "w") as f:
+        json.dump(metadata, f, indent=4)

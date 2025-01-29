@@ -15,19 +15,26 @@ import caiman as cm
 from caiman.source_extraction.cnmf import params as params
 from caiman.motion_correction import MotionCorrect
 from caiman.source_extraction import cnmf
+from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
 from toolbox.utils.exceptions import IdeasError
-from toolbox.utils.utilities import movie_series
+from toolbox.utils.utilities import movie_series, cell_set_series
 from toolbox.utils.utilities import get_file_size
 from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
+    write_cell_statuses,
 )
 from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
 from toolbox.utils.previews import (
     generate_caiman_motion_corrected_previews,
     generate_initialization_images_preview,
+    generate_cell_set_previews,
+    generate_event_set_preview,
 )
-from toolbox.utils.metadata import generate_caiman_motion_correction_metadata
+from toolbox.utils.metadata import (
+    generate_caiman_motion_correction_metadata,
+    generate_caiman_spike_extraction_metadata,
+)
 
 import logging
 
@@ -1108,3 +1115,219 @@ def source_extraction(
     )
 
     logger.info("CaImAn source extraction completed")
+
+
+def spike_extraction(
+    *,
+    # Input Files
+    input_cellset_files: List[str],
+    # Spike Extraction
+    bl: str = "auto",
+    c1: str = "auto",
+    g: str = "auto",
+    sn: str = "auto",
+    p: int = 1,
+    method_deconvolution: str = "oasis",
+    bas_nonneg: bool = True,
+    noise_method: str = "logmexp",
+    noise_range: str = "0.25,0.5",
+    s_min: float = None,
+    optimize_g: bool = False,
+    fudge_factor: float = 0.96,
+    lags: int = 5,
+    solvers: str = "ECOS,SCS",
+):
+    """Run CaImAn spike extraction algorithm.
+
+    INPUT FILES
+    :param input_cellset_files: list of paths to the input cellset files (isxd)
+
+    SPIKE EXTRACTION
+    :param bl: Fluorescence baseline value. If set to 'auto', it will be estimated from the data.
+    :param c1: Value of calcium at time 0. If set to 'auto', it will be set based on the data.
+    :param g: Parameters of the autoregressive process that models the fluorescence impulse response. If set to 'auto', it will be estimated from the data.
+    :param sn: Standard deviation of the noise distribution. If set to 'auto', it will be estimated from the data.
+    :param p: order of AR indicator dynamics
+    :param method_deconvolution: Method for solving the constrained deconvolution of temporal traces
+    :param bas_nonneg: If True, a non-negative baseline will be used. If False, the baseline will be greater than or equal to the minimum value, which could be negative.
+    :param noise_method: Power spectrum averaging method used for noise estimation
+    :param noise_range: Range of normalized frequencies over which to compute the power spectrum for noise estimation. The range should be specified as 'fmin,fmax', where fmin and fmax refer to the minimum and maximum of the normalized frequency range to use (e.g.: 0.25,0.5).
+    :param s_min: Minimum spike threshold amplitude
+    :param optimize_g: If True, the time constants will be optimized. This applies only to the 'oasis' deconvolution method.
+    :param fudge_factor: Bias correction factor for the discrete time constants
+    :param lags: Number of lags for estimating the time constants of the autoregressive model. This should be an integer between 1 and the number of timepoints in the data.
+    :param solvers: Primary and secondary solvers to use with the cvxpy deconvolution method. This should be specified as 'solver1,solver2', where solver1 and solver1 refer to the primary and secondary solvers (e.g.: ECOS,SCS). The solvers should be one of the following values: 'ECOS', 'SCS', and 'CVXOPT'.
+    """
+    logger.info("CaImAn neural activity extraction started")
+
+    # set output directory
+    output_dir = os.getcwd()
+
+    # sort input cell set chronologically
+    original_input_cellset_files = input_cellset_files
+    input_cellset_files = cell_set_series(input_cellset_files)
+    original_input_cellset_indices = [
+        input_cellset_files.index(f) for f in original_input_cellset_files
+    ]
+
+    logger.info(
+        "Converting input parameters to match CaImAn's expected format"
+    )
+    # adjust parameters that may be passed in as lists
+    if isinstance(noise_range, list):
+        noise_range = ",".join(noise_range)
+    if isinstance(solvers, list):
+        solvers = ",".join(solvers)
+
+    # adjust parameters that can be automatically estimated
+    # and those that needs to be reformatted
+    bl = None if bl in ["auto", None] else float(bl)
+    c1 = None if c1 in ["auto", None] else float(c1)
+    g = None if g in ["auto", None] else [float(n) for n in g.split(",")]
+    sn = None if sn in ["auto", None] else float(sn)
+    noise_range = [float(n) for n in noise_range.split(",")]
+
+    # process data
+    cellset_denoised_filenames = []
+    eventset_filenames = []
+    for output_file_index, i in enumerate(original_input_cellset_indices):
+        # read input cell set and gather corresponding metadata
+        input_cellset = isx.CellSet.read(input_cellset_files[i])
+        cell_names = [
+            input_cellset.get_cell_name(j)
+            for j in range(input_cellset.num_cells)
+        ]
+        cell_statuses = [
+            input_cellset.get_cell_status(j)
+            for j in range(input_cellset.num_cells)
+        ]
+        time_offsets = np.array(
+            [
+                x.to_usecs()
+                for x in input_cellset.timing.get_offsets_since_start()
+            ],
+            np.uint64,
+        )
+
+        # initialize denoised cell set
+        cellset_denoised_filename = (
+            f"cellset_denoised.{str(output_file_index).zfill(3)}.isxd"
+        )
+        cellset_denoised_filenames.append(cellset_denoised_filename)
+        denoised_cellset = isx.CellSet.write(
+            cellset_denoised_filename,
+            input_cellset.timing,
+            input_cellset.spacing,
+        )
+
+        # initialize event set
+        eventset_filename = (
+            f"neural_events.{str(output_file_index).zfill(3)}.isxd"
+        )
+        eventset_filenames.append(eventset_filename)
+        neural_events = isx.EventSet.write(
+            eventset_filename, input_cellset.timing, cell_names
+        )
+
+        # deconvolve calcium traces and extract neural spikes
+        for cell_index in range(input_cellset.num_cells):
+            # gather input cell set data
+            cell_name = input_cellset.get_cell_name(cell_index)
+            footprint = input_cellset.get_cell_image_data(cell_index)
+            trace = input_cellset.get_cell_trace_data(cell_index)
+
+            # apply constrained foopsi to input trace
+            denoised_trace, _, _, _, _, spikes, _ = constrained_foopsi(
+                fluor=trace,
+                bl=bl,
+                c1=c1,
+                g=g,
+                sn=sn,
+                p=p,
+                method_deconvolution=method_deconvolution,
+                bas_nonneg=bas_nonneg,
+                noise_range=noise_range,
+                noise_method=noise_method,
+                lags=lags,
+                fudge_factor=fudge_factor,
+                solvers=solvers,
+                optimize_g=optimize_g,
+                s_min=s_min,
+            )
+
+            # add denoised trace to output cell set
+            denoised_cellset.set_cell_data(
+                cell_index,
+                footprint,
+                denoised_trace.astype(np.float32),
+                cell_name,
+            )
+
+            # add neural spikes to output event set
+            events_trace = spikes.astype(np.float32)
+            event_indices = np.argwhere(events_trace > 0)
+            event_amplitudes = events_trace[event_indices].reshape(-1)
+            event_offsets = time_offsets[event_indices]
+            neural_events.set_cell_data(
+                index=cell_index,
+                offsets=event_offsets,
+                amplitudes=event_amplitudes,
+            )
+
+        denoised_cellset.flush()
+        neural_events.flush()
+
+        # update cell statuses
+        write_cell_statuses(
+            cell_statuses=cell_statuses,
+            cell_set_filenames=[cellset_denoised_filename],
+        )
+
+        # log files created
+        logger.info(
+            f"Denoised cell set saved "
+            f"({os.path.basename(cellset_denoised_filename)}, "
+            f"size: {get_file_size(cellset_denoised_filename)})"
+        )
+        logger.info(
+            f"Neural events saved "
+            f"({os.path.basename(eventset_filename)}, "
+            f"size: {get_file_size(eventset_filename)})"
+        )
+
+        # generate data previews
+        logger.info(
+            f"Generating cell set preview for '{os.path.basename(cellset_denoised_filename)}'"
+        )
+        try:
+            generate_cell_set_previews(
+                cellset_filename=cellset_denoised_filename,
+                output_dir=output_dir,
+            )
+        except Exception as e:
+            logger.warning(
+                f"Cell set preview could not be generated for file {os.path.basename(cellset_denoised_filename)}"
+            )
+
+        logger.info(
+            f"Generating event set preview for '{os.path.basename(eventset_filename)}'"
+        )
+        try:
+            generate_event_set_preview(
+                eventset_filename=eventset_filename, output_dir=output_dir
+            )
+        except Exception as e:
+            logger.warning(
+                f"Neural events preview could not be generated for file {os.path.basename(eventset_filename)}"
+            )
+
+    # generate metadata
+    logger.info("Generating spike extraction metadata")
+    generate_caiman_spike_extraction_metadata(
+        cellset_denoised_filenames=cellset_denoised_filenames,
+        eventset_filenames=eventset_filenames,
+        original_input_indices=original_input_cellset_indices,
+        input_cellset_files=input_cellset_files,
+    )
+
+    logger.info("CaImAn neural activity extraction completed")

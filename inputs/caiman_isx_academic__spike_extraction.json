@@ -1,0 +1,11 @@
+{
+    "input_cellset_files": ["/ideas/data/cellset_series_part1.isxd"],
+    "p": 1,
+    "method_deconvolution": "oasis",
+    "bas_nonneg": true,
+    "noise_method": "logmexp",
+    "noise_range": "0.25,0.5",
+    "optimize_g": false,
+    "fudge_factor": 0.96,
+    "lags": 5
+}

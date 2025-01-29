@@ -25,6 +25,7 @@ def write_cell_statuses(
     :param cell_statuses: status to assign to each individual cell
     :param cell_set_filenames: list of paths to cell set files
     """
+    logger.info("Setting cell statuses")
     for f in cell_set_filenames:
         cellset = isx.CellSet.read(f, read_only=False)
         for i in range(len(cell_statuses)):

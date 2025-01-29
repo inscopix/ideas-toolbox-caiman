@@ -1,0 +1,93 @@
+[
+    {
+        "key": "cellset_denoised",
+        "analysis_table_result_column_name": "Denoised Cell Set(s)",
+        "file_type": "cell_set",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Denoised cell set(s)",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_cellset_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "neural_events",
+        "analysis_table_result_column_name": "Spike Event Set(s)",
+        "file_type": "neural_events",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Inferred neural spikes",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_cellset_files"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "preview_neural_events",
+        "analysis_table_result_column_name": "Neural Events Preview",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Inferred spikes from deconvolution. (top) Raster plot of detected events for all neurons; each neuron is a row. (middle) Average population event rate over time. (bottom left) Histogram of event rate. (bottom right) Histogram of mean inter-event interval.",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_cellset_files"
+        ],
+        "preview_of": [
+            "neural_events"
+        ]
+    },
+    {
+        "key": "traces_cellset_denoised",
+        "analysis_table_result_column_name": "Cellset Denoised Traces",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Denoised temporal traces (i.e. the modeled calcium concentration from deconvolution) of cells. Temporal activity of selected individual detected cells, chosen pseudorandomly to represent the range of SNRs (and sorted highest to lowest). The corresponding spatial footprints can be seen in the spatial footprints preview.",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_cellset_files"
+        ],
+        "preview_of": [
+            "cellset_denoised"
+        ]
+    },
+    {
+        "key": "footprints_cellset_denoised",
+        "analysis_table_result_column_name": "Cellset Denoised Footprints",
+        "file_type": "",
+        "file_format": "png",
+        "file_structure": "",
+        "file_category": "result",
+        "help": "Spatial footprints of cells. Up to 20 cells, chosen across a range of SNRs, are highlighted. The corresponding fluorescent activity traces for the highlighted cells can be seen in the traces preview.",
+        "required": true,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_cellset_files"
+        ],
+        "preview_of": [
+            "cellset_denoised"
+        ]
+    }
+]

@@ -23,7 +23,7 @@
             "name": "CaImAn Cell Extraction Workflow",
             "key": "caiman_isx_academic__caiman_workflow",
             "help": "The CaImAn cell identification workflow performs motion correction using the NorMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.",
-            "version": "1.0.2",
+            "version": "1.1.0",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
@@ -614,11 +614,13 @@
                         },
                         "choices": [
                             "oasis",
-                            "cvxpy"
+                            "cvxpy",
+                            "cvx"
                         ],
                         "display_options": [
                             "oasis",
-                            "cvxpy"
+                            "cvxpy",
+                            "cvx"
                         ],
                         "choices_display": ""
                     },
@@ -1028,8 +1030,8 @@
                         },
                         {
                             "result_key": "neural_events",
-                            "result_name": "Neural Events",
-                            "help": "Neural events",
+                            "result_name": "Spike Event Set(s)",
+                            "help": "Inferred neural spikes",
                             "required": true,
                             "multiple": true,
                             "file_formats": [
@@ -1042,10 +1044,10 @@
             ]
         },
         {
-            "name": "NoRMCorre",
+            "name": "CaImAn NoRMCorre",
             "key": "caiman_isx_academic__motion_correction",
             "help": "NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.",
-            "version": "1.0.1",
+            "version": "1.1.0",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
@@ -1559,8 +1561,8 @@
         {
             "name": "CaImAn Source Extraction",
             "key": "caiman_isx_academic__source_extraction",
-            "help": "CaImAn source extraction performs cell identification using the CNMF/CNMF-E algorithm.",
-            "version": "0.1.0",
+            "help": "Extract spatial footprints and temporal activity of cells using the CaImAn CNMF/CNMF-E algorithm.",
+            "version": "0.3.0",
             "maturity": "development",
             "visibility": "private",
             "toolkit": "Calcium Imaging Processing",
@@ -2276,8 +2278,352 @@
                         },
                         {
                             "result_key": "neural_events",
-                            "result_name": "Neural Events",
-                            "help": "Neural events",
+                            "result_name": "Spike Event Set(s)",
+                            "help": "Inferred neural spikes",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "neural_events"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "CaImAn Spike Extraction",
+            "key": "caiman_isx_academic__spike_extraction",
+            "help": "Infer and extract the neural activity underlying fluorescence traces using a constrained deconvolution approach.",
+            "version": "0.1.0",
+            "maturity": "development",
+            "visibility": "private",
+            "toolkit": "Calcium Imaging Processing",
+            "command": "caiman_isx_academic__spike_extraction.sh",
+            "resources": {
+                "cpu": 2,
+                "gpu": 0,
+                "memory": 8000,
+                "storage": 16000,
+                "max_file_size": 500
+            },
+            "params": [
+                {
+                    "key": "input_cellset_files",
+                    "name": "Cell Set(s)",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Single cell set or cell set series",
+                    "type": {
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "is_source": true,
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "cell_set",
+                                "file_structure": "binary",
+                                "file_format": "isxd"
+                            }
+                        ],
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 0
+                        }
+                    }
+                },
+                {
+                    "key": "bl",
+                    "name": "bl",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Fluorescence baseline value. If set to 'auto', it will be estimated from the data.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 0
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "c1",
+                    "name": "c1",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Value of calcium at time 0. If set to 'auto', it will be set based on the data.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 1
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "g",
+                    "name": "g",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Parameters of the autoregressive process that models the fluorescence impulse response. The parameters should be specified as comma-separated value (e.g. 5,10). If set to 'auto', it will be estimated from the data.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 2
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "sn",
+                    "name": "sn",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Standard deviation of the noise distribution. If set to 'auto', it will be estimated from the data.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 3
+                        }
+                    },
+                    "default": "auto"
+                },
+                {
+                    "key": "p",
+                    "name": "p",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Order of the autoregressive model used to deconvolve the indicator temporal dynamics",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 4
+                        },
+                        "min": 0
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "method_deconvolution",
+                    "name": "method_deconvolution",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Method for solving the constrained deconvolution of temporal traces",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 5
+                        },
+                        "choices": [
+                            "oasis",
+                            "cvxpy",
+                            "cvx"
+                        ],
+                        "display_options": [
+                            "oasis",
+                            "cvxpy",
+                            "cvx"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "oasis"
+                },
+                {
+                    "key": "bas_nonneg",
+                    "name": "bas_nonneg",
+                    "required": false,
+                    "hidden": false,
+                    "help": "If True, a non-negative baseline will be used. If False, the baseline will be greater than or equal to the minimum value, which could be negative.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 6
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "noise_method",
+                    "name": "noise_method",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Power spectrum averaging method used for noise estimation",
+                    "type": {
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 7
+                        },
+                        "choices": [
+                            "mean",
+                            "median",
+                            "logmexp"
+                        ],
+                        "display_options": [
+                            "mean",
+                            "median",
+                            "logmexp"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "logmexp"
+                },
+                {
+                    "key": "noise_range",
+                    "name": "noise_range",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Range of normalized frequencies over which to compute the power spectrum for noise estimation. The range should be specified as 'fmin,fmax', where fmin and fmax refer to the minimum and maximum of the normalized frequency range to use (e.g.: 0.25,0.5).",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 8
+                        }
+                    },
+                    "default": "0.25,0.5"
+                },
+                {
+                    "key": "s_min",
+                    "name": "s_min",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum spike threshold amplitude. For negative values the threshold is abs(s_min) * sn * sqrt(1-g). If unspecified, the standard L1 penalty is used. If set to 0, the threshold is determined automatically such that RSS <= sn^2 T.",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 9
+                        },
+                        "min": 0
+                    }
+                },
+                {
+                    "key": "optimize_g",
+                    "name": "optimize_g",
+                    "required": true,
+                    "hidden": false,
+                    "help": "If True, the time constants will be optimized. This applies only to the 'oasis' deconvolution method.",
+                    "type": {
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 10
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "fudge_factor",
+                    "name": "fudge_factor",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Bias correction factor for the discrete time constants",
+                    "type": {
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 11
+                        },
+                        "min": 0.0,
+                        "max": 1.0
+                    },
+                    "default": 0.96
+                },
+                {
+                    "key": "lags",
+                    "name": "lags",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of lags for estimating the time constants of the autoregressive model. This should be an integer between 1 and the number of timepoints in the data.",
+                    "type": {
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 12
+                        },
+                        "min": 1
+                    },
+                    "default": 5
+                },
+                {
+                    "key": "solvers",
+                    "name": "solvers",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Primary and secondary solvers to use with the 'cvxpy' deconvolution method. This should be specified as 'solver1,solver2', where solver1 and solver1 refer to the primary and secondary solvers (e.g.: ECOS,SCS). The solvers should be one of the following values: 'ECOS', 'SCS', and 'CVXOPT'.",
+                    "type": {
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "is_source": false,
+                        "display": {
+                            "group": "Parameters",
+                            "group_order": 13
+                        }
+                    },
+                    "default": "ECOS,SCS"
+                }
+            ],
+            "results": [
+                {
+                    "group_key": "caiman_isx_academic__spike_extraction",
+                    "group_name": "CaImAn Spike Extraction Output Group",
+                    "group_type": "tool_output",
+                    "required": true,
+                    "multiple": false,
+                    "files": [
+                        {
+                            "result_key": "cellset_denoised",
+                            "result_name": "Denoised Cell Set(s)",
+                            "help": "Denoised cell set(s)",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "cell_set"
+                        },
+                        {
+                            "result_key": "neural_events",
+                            "result_name": "Spike Event Set(s)",
+                            "help": "Inferred neural spikes",
                             "required": true,
                             "multiple": true,
                             "file_formats": [
