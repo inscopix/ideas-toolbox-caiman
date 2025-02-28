@@ -16,7 +16,7 @@ setup(
     description="",
     url="https://github.com/inscopix/ideas-toolbox-caiman",
     install_requires=[
-        f"ideas-python-utils@git+https://{token}@github.com/inscopix/ideas-python-utils.git@10.13.1",
+        f"ideas-python-utils@git+https://{token}@github.com/inscopix/ideas-python-utils.git@10.14.1",
         f"ideas-commons@git+https://{token}@github.com/inscopix/ideas-commons.git@1.25.2",
         f"ideas-schemas@git+https://{token}@github.com/inscopix/ideas-schemas.git@2.4.2",
         f"ideas-tools-profiler@git+https://{token}@github.com/inscopix/ideas-tools-profiler.git@0.2.0",

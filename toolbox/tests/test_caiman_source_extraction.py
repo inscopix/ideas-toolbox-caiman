@@ -44,7 +44,7 @@ def clean_up():
         if os.path.exists(f):
             os.remove(f)
 
-    file_ext = [".isxd", ".png", ".mmap", ".mp4", ".csv"]
+    file_ext = [".isxd", ".svg", ".mmap", ".mp4", ".csv"]
     for f in os.listdir("."):
         if os.path.splitext(f)[-1] in file_ext:
             os.remove(f)
@@ -84,18 +84,18 @@ def test_caiman_source_extraction_single_isxd_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "initialization_images.png",
+        "initialization_images.svg",
         # raw cell set
         "cellset_raw.000.isxd",
-        "traces_cellset_raw.000.png",
-        "footprints_cellset_raw.000.png",
+        "traces_cellset_raw.000.svg",
+        "footprints_cellset_raw.000.svg",
         # denoised cell set
         "cellset_denoised.000.isxd",
-        "traces_cellset_denoised.000.png",
-        "footprints_cellset_denoised.000.png",
+        "traces_cellset_denoised.000.svg",
+        "footprints_cellset_denoised.000.svg",
         # neural events
         "neural_events.000.isxd",
-        "preview_neural_events.000.png",
+        "preview_neural_events.000.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -177,26 +177,26 @@ def test_caiman_source_extraction_isxd_movie_series():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "initialization_images.png",
+        "initialization_images.svg",
         # raw cell set
         "cellset_raw.000.isxd",
-        "traces_cellset_raw.000.png",
-        "footprints_cellset_raw.000.png",
+        "traces_cellset_raw.000.svg",
+        "footprints_cellset_raw.000.svg",
         "cellset_raw.001.isxd",
-        "traces_cellset_raw.001.png",
-        "footprints_cellset_raw.001.png",
+        "traces_cellset_raw.001.svg",
+        "footprints_cellset_raw.001.svg",
         # denoised cell set
         "cellset_denoised.000.isxd",
-        "traces_cellset_denoised.000.png",
-        "footprints_cellset_denoised.000.png",
+        "traces_cellset_denoised.000.svg",
+        "footprints_cellset_denoised.000.svg",
         "cellset_denoised.001.isxd",
-        "traces_cellset_denoised.001.png",
-        "footprints_cellset_denoised.001.png",
+        "traces_cellset_denoised.001.svg",
+        "footprints_cellset_denoised.001.svg",
         # neural events
         "neural_events.000.isxd",
-        "preview_neural_events.000.png",
+        "preview_neural_events.000.svg",
         "neural_events.001.isxd",
-        "preview_neural_events.001.png",
+        "preview_neural_events.001.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -333,18 +333,18 @@ def test_caiman_source_extraction_single_tiff_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "initialization_images.png",
+        "initialization_images.svg",
         # raw cell set
         "cellset_raw.000.isxd",
-        "traces_cellset_raw.000.png",
-        "footprints_cellset_raw.000.png",
+        "traces_cellset_raw.000.svg",
+        "footprints_cellset_raw.000.svg",
         # denoised cell set
         "cellset_denoised.000.isxd",
-        "traces_cellset_denoised.000.png",
-        "footprints_cellset_denoised.000.png",
+        "traces_cellset_denoised.000.svg",
+        "footprints_cellset_denoised.000.svg",
         # neural events
         "neural_events.000.isxd",
-        "preview_neural_events.000.png",
+        "preview_neural_events.000.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -420,18 +420,18 @@ def test_caiman_source_extraction_single_avi_movie():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "initialization_images.png",
+        "initialization_images.svg",
         # raw cell set
         "cellset_raw.000.isxd",
-        "traces_cellset_raw.000.png",
-        "footprints_cellset_raw.000.png",
+        "traces_cellset_raw.000.svg",
+        "footprints_cellset_raw.000.svg",
         # denoised cell set
         "cellset_denoised.000.isxd",
-        "traces_cellset_denoised.000.png",
-        "footprints_cellset_denoised.000.png",
+        "traces_cellset_denoised.000.svg",
+        "footprints_cellset_denoised.000.svg",
         # neural events
         "neural_events.000.isxd",
-        "preview_neural_events.000.png",
+        "preview_neural_events.000.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -518,18 +518,18 @@ def test_caiman_source_extraction_params_from_file():
     for f in [
         # caiman output
         "caiman_output.hdf5",
-        "initialization_images.png",
+        "initialization_images.svg",
         # raw cell set
         "cellset_raw.000.isxd",
-        "traces_cellset_raw.000.png",
-        "footprints_cellset_raw.000.png",
+        "traces_cellset_raw.000.svg",
+        "footprints_cellset_raw.000.svg",
         # denoised cell set
         "cellset_denoised.000.isxd",
-        "traces_cellset_denoised.000.png",
-        "footprints_cellset_denoised.000.png",
+        "traces_cellset_denoised.000.svg",
+        "footprints_cellset_denoised.000.svg",
         # neural events
         "neural_events.000.isxd",
-        "preview_neural_events.000.png",
+        "preview_neural_events.000.svg",
         # metadata
         "output_metadata.json",
     ]:

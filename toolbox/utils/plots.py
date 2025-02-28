@@ -234,6 +234,7 @@ def plot_trajectory_with_zones(
     )
 
     plt.savefig(preview_filename)
+    plt.close()
 
 
 @beartype
@@ -451,7 +452,7 @@ def add_scalebar(
 def save_zones_preview(
     *,
     zones_file: Union[str, List[dict], pd.DataFrame],
-    output_preview_filename: str = "zones_preview.png",
+    output_preview_filename: str = "zones_preview.svg",
     image_source: Optional[Union[str, np.ndarray]] = None,
 ):
     """Create and save a preview of the zones in a zones file. Optionally plot the zones on top of an image.
@@ -492,6 +493,7 @@ def save_zones_preview(
                 or image_source.endswith(".jpg")
                 or image_source.endswith(".jpeg")
                 or image_source.endswith(".tif")
+                or image_source.endswith(".svg")
             ):
                 image = plt.imread(image_source)
         elif isinstance(image_source, np.ndarray):
@@ -510,6 +512,7 @@ def save_zones_preview(
         # Invert y-axis to match orientation in IDPS (y=0 at top of image and y=max at bottom)
         ax.invert_yaxis()
         fig.savefig(output_preview_filename)
+        plt.close(fig)
 
     # Plot the zones
     fig, ax = plt.subplots()
@@ -525,7 +528,7 @@ def save_zones_preview(
         plt.imshow(image, cmap="gray", alpha=0.5)
 
     plt.savefig(output_preview_filename)
-    plt.close()
+    plt.close(fig)
 
 
 def _format_yticks(tick_val, pos):
@@ -565,7 +568,7 @@ def save_neural_traces_preview(
     output_preview_filename: str,
     vertical_line_indices: list[int] = None,
 ) -> None:
-    """Save a preview of the input neural traces to a PNG file
+    """Save a preview of the input neural traces to a SVG file
 
     all traces are plotted. rejected/undecided cells are plotted
     in gray. accepted cells are plotted in colors.
@@ -638,6 +641,7 @@ def save_neural_traces_preview(
 
     logger.info("Saving traces figure...")
     fig.savefig(output_preview_filename, dpi=300)
+    plt.close(fig)
 
     logger.info(
         f"Traces preview saved ({os.path.basename(output_preview_filename)}, size: {get_file_size(output_preview_filename)})"
@@ -649,7 +653,7 @@ def save_footprints_preview(
     cell_set_file: str,
     output_preview_filename: str,
 ) -> None:
-    """Save a PNG image showing footprints of cells
+    """Save a SVG image showing footprints of cells
 
     rejected/undecided cells shown in gray
 
@@ -741,6 +745,7 @@ def save_footprints_preview(
         output_preview_filename,
         dpi=300,
     )
+    plt.close(fig)
 
     logger.info(
         f"Footprints preview saved ({os.path.basename(output_preview_filename)}, size: {get_file_size(output_preview_filename)})"
@@ -750,7 +755,7 @@ def save_footprints_preview(
 def save_experiment_annotations_preview(
     df: pd.DataFrame, output_preview_filename: str, top_n_states: int = 10
 ) -> None:
-    """Save a preview of an experiment annotations dataframe to a PNG file.
+    """Save a preview of an experiment annotations dataframe to a SVG file.
        By default the top ten most common states are shown on a bar chart.
 
     :param df: input dataframe from which to extract a preview
@@ -778,6 +783,7 @@ def save_experiment_annotations_preview(
         output_preview_filename,
         dpi=300,
     )
+    plt.close(fig)
 
 
 def arrange_axes_to_ordinal_values(d):
@@ -802,13 +808,13 @@ class EventSetPreview(object):
     def __init__(
         self,
         input_eventset_filepath: str,
-        output_png_filepath: str,
+        output_svg_filepath: str,
         markercolor: str = "k",
         markersize: float = 1.5,
         figsize: tuple = (14, 12),
         axis_label_fontsize: float = 15,
-        background_color: str = "dark_background",
-        foreground_color: str = "white",
+        background_color: str = "default",
+        foreground_color: str = "black",
         event_rate_num_bins: int = 30,
         inter_event_interval_bins: int = 30,
         gaussian_filter_smoothing_sigma_time: float = 0.5,
@@ -817,7 +823,7 @@ class EventSetPreview(object):
         """Initialize features that will be derived from event set and eventually plotted
         Parameters:
             input_eventset_filepath: Filepath of the eventset file
-            output_png_filepath: Filepath of the preview png file
+            output_svg_filepath: Filepath of the preview svg file
             markercolor: color of the matplotlib marker
             markersize: size of matpotlib marker
             figsize: size of the matplotlib figure
@@ -831,7 +837,7 @@ class EventSetPreview(object):
             lineplot_linewidth: Linewidth
         """
         self.filepath = input_eventset_filepath
-        self.output_png_filepath = output_png_filepath
+        self.output_svg_filepath = output_svg_filepath
 
         # Raise an exception if the events file does not exist
         if not os.path.exists(self.filepath):
@@ -1066,4 +1072,5 @@ class EventSetPreview(object):
                     axis.spines["left"].set_color(self.foreground_color)
 
             # Saving the preview
-            plt.savefig(self.output_png_filepath, dpi=300)
+            plt.savefig(self.output_svg_filepath, transparent=True)
+            plt.close(fig)
