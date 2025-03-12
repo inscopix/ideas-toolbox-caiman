@@ -813,8 +813,8 @@ class EventSetPreview(object):
         markersize: float = 1.5,
         figsize: tuple = (14, 12),
         axis_label_fontsize: float = 15,
-        background_color: str = "default",
-        foreground_color: str = "black",
+        background_color: str = "dark_background",
+        foreground_color: str = "white",
         event_rate_num_bins: int = 30,
         inter_event_interval_bins: int = 30,
         gaussian_filter_smoothing_sigma_time: float = 0.5,
@@ -1072,5 +1072,5 @@ class EventSetPreview(object):
                     axis.spines["left"].set_color(self.foreground_color)
 
             # Saving the preview
-            plt.savefig(self.output_svg_filepath, transparent=True)
+            plt.savefig(self.output_svg_filepath, dpi=300)
             plt.close(fig)
