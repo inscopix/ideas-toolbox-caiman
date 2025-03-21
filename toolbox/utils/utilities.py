@@ -291,27 +291,16 @@ def movie_series(files: List[str]) -> List[str]:
         check_file_extention_is(file, ext=".isxd")
 
         # ensure it consists of an isxd MOVIE
-        metadata = _extract_footer(file)
-        if metadata["type"] != 0:
-            raise Exception(f"{file} is not a ISXD movie")
+        movie = isx.Movie.read(file)
 
         # read the metadata and ensure that all the pixel shapes are the same
-        pixel_shapes[i] = [
-            metadata["spacingInfo"]["numPixels"]["x"],
-            metadata["spacingInfo"]["numPixels"]["y"],
-        ]
+        pixel_shapes[i] = movie.spacing.num_pixels
 
         # read start time of the movie
-        start_times[i] = (
-            metadata["timingInfo"]["start"]["secsSinceEpoch"]["num"]
-            / metadata["timingInfo"]["start"]["secsSinceEpoch"]["den"]
-        )
+        start_times[i] = movie.timing.start._to_secs_since_epoch().secs_float
 
         # check that frame rates are the same
-        periods[i] = (
-            metadata["timingInfo"]["period"]["num"]
-            / metadata["timingInfo"]["period"]["den"]
-        )
+        periods[i] = movie.timing.period.secs_float
 
     for i in range(len(files)):
         if not np.isclose(periods[0], periods[i], atol=1e-6):

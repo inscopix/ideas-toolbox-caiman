@@ -28,6 +28,12 @@ ifndef TC_NO_RENAME
 endif
 
 
+# specify a different data dir to volume mount
+# when running the toolbox container for local testing
+ifndef DATA_DIR
+	DATA_DIR=$(PWD)/data
+endif
+
 
 # credentials
 IDEAS_GITHUB_TOKEN_FILE=.ideas-github-token
@@ -132,7 +138,7 @@ run: build clean
 	-rm -rf $(PWD)/outputs/
 	docker run \
 			--platform ${PLATFORM} \
-			-v $(PWD)/data:/ideas/data \
+			-v ${DATA_DIR}:/ideas/data \
 			-v $(PWD)/inputs:/ideas/inputs \
 			-v $(PWD)/commands:/ideas/commands \
 			-e TC_NO_RENAME=$(TC_NO_RENAME) \
