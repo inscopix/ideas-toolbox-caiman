@@ -25,6 +25,7 @@ def write_cell_statuses(
     :param cell_statuses: status to assign to each individual cell
     :param cell_set_filenames: list of paths to cell set files
     """
+    logger.info("Setting cell statuses")
     for f in cell_set_filenames:
         cellset = isx.CellSet.read(f, read_only=False)
         for i in range(len(cell_statuses)):
@@ -239,8 +240,12 @@ def convert_caiman_output_to_isxd(
     global_cellset.flush()
 
     # update cell statuses
-    cell_statuses = np.array(["accepted" for _ in range(num_cells)])
-    cell_statuses[model.estimates.idx_components_bad] = "rejected"
+    cell_statuses = np.array(["undecided" for _ in range(num_cells)])
+    if model.estimates.idx_components is not None:
+        cell_statuses[model.estimates.idx_components] = "accepted"
+    if model.estimates.idx_components_bad is not None:
+        cell_statuses[model.estimates.idx_components_bad] = "rejected"
+
     write_cell_statuses(
         cell_statuses=cell_statuses,
         cell_set_filenames=cellset_raw_filenames
@@ -378,7 +383,7 @@ def convert_memmap_data_to_output_files(
             # save data to tiff
             with tifffile.TiffWriter(mc_movie_filename, bigtiff=True) as tif:
                 for frame_index in frame_indices:
-                    tif.save(images[frame_index])
+                    tif.write(images[frame_index], contiguous=True)
         elif output_movie_format == "avi":
             # save data to avi
             height, width = spacing_info[i].num_pixels

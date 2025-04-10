@@ -44,7 +44,7 @@ def clean_up():
         if os.path.exists(f):
             os.remove(f)
 
-    file_ext = [".isxd", ".png", ".mmap", ".mp4", ".csv"]
+    file_ext = [".isxd", ".svg", ".mmap", ".mp4", ".csv"]
     for f in os.listdir("."):
         if os.path.splitext(f)[-1] in file_ext:
             os.remove(f)
@@ -77,8 +77,8 @@ def test_caiman_motion_correction_single_2p_tif_file_with_user_specified_params(
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -200,8 +200,8 @@ def test_caiman_motion_correction_single_2p_tif_file_with_unused_json_params_fil
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -324,8 +324,8 @@ def test_caiman_motion_correction_single_2p_tif_file_with_json_params_file():
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -445,8 +445,8 @@ def test_caiman_motion_correction_1p_tif_file_pw_rigid_with_user_specified_param
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -536,7 +536,7 @@ def test_caiman_motion_correction_1p_tif_file_rigid_with_user_specified_params()
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -621,8 +621,8 @@ def test_caiman_motion_correction_single_isxd_file_with_user_specified_params():
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -682,8 +682,8 @@ def test_caiman_motion_correction_single_avi_file_with_user_specified_params():
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -752,8 +752,8 @@ def test_caiman_motion_correction_isxd_movie_series_piecewise_rigid():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -908,7 +908,7 @@ def test_caiman_motion_correction_isxd_movie_series_rigid():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1055,8 +1055,8 @@ def test_caiman_motion_correction_tiff_movie_series():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1210,8 +1210,8 @@ def test_caiman_motion_correction_avi_movie_series():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1406,8 +1406,8 @@ def test_caiman_motion_correction_single_input_isxd_file_single_output_tiff_file
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1466,7 +1466,7 @@ def test_caiman_motion_correction_single_input_isxd_file_single_output_avi_file(
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1524,7 +1524,7 @@ def test_caiman_motion_correction_single_tiff_file_single_output_avi_file():
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1580,7 +1580,7 @@ def test_caiman_motion_correction_single_avi_file_single_output_tiff_file():
         "preview_mc_movie.000.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1638,7 +1638,7 @@ def test_caiman_motion_correction_tiff_movie_series_to_avi_output():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1734,7 +1734,7 @@ def test_caiman_motion_correction_avi_movie_series_to_tiff_output():
         "preview_mc_movie.001.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:
@@ -1828,8 +1828,8 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
         "preview_mc_movie.002.mp4",
         # motion correction quality control data
         "mc_qc_data.csv",
-        "preview_rigid_shifts.png",
-        "preview_piecewise_rigid_shifts.png",
+        "preview_rigid_shifts.svg",
+        "preview_piecewise_rigid_shifts.svg",
         # metadata
         "output_metadata.json",
     ]:

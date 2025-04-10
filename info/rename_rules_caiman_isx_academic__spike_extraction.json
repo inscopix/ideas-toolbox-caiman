@@ -1,0 +1,39 @@
+{
+    "caiman_isx_academic__spike_extraction": {
+        "cellset_denoised": {
+            "pattern": [
+                "input_cellset_files",
+                "custom_string"
+            ],
+            "custom_string": "cellset_denoised"
+        },
+        "neural_events": {
+            "pattern": [
+                "input_cellset_files",
+                "custom_string"
+            ],
+            "custom_string": "neural_events"
+        },
+        "preview_neural_events": {
+            "pattern": [
+                "input_cellset_files",
+                "custom_string"
+            ],
+            "custom_string": "neural_events_preview"
+        },
+        "traces_cellset_denoised": {
+            "pattern": [
+                "input_cellset_files",
+                "custom_string"
+            ],
+            "custom_string": "denoised_cell_set_traces"
+        },
+        "footprints_cellset_denoised": {
+            "pattern": [
+                "input_cellset_files",
+                "custom_string"
+            ],
+            "custom_string": "denoised_cell_set_footprints"
+        }
+    }
+}
