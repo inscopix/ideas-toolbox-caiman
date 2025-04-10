@@ -13,7 +13,9 @@ A toolbox for running [CaImAn-based](https://github.com/flatironinstitute/CaImAn
 This toolbox is designed to run as a Docker image, which can be run on the IDEAS platform. This toolbox consists of the following tools:
 
 - `CaImAn Cell Extraction Workflow`: The CaImAn cell identification workflow performs motion correction using the NoRMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.
-- `NoRMCorre`: NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.
+- `CaImAn NoRMCorre`: NoRMCorre (Non-Rigid Motion Correction) is a motion correction algorithm that can be used to perform rigid or piecewise rigid motion correction based on template matching.
+- `CaImAn Source Extraction`: Extract spatial footprints and temporal activity of cells using the CaImAn CNMF/CNMF-E algorithm.
+- `CaImAn Spike Extraction`: Infer and extract the neural activity underlying fluorescence traces using a constrained deconvolution approach.
 
 ## How to Get Help
 - [IDEAS documentation](https://inscopix.github.io/ideas-docs/tools/caiman/caiman_isx_academic__caiman_workflow/caiman_isx_academic__caiman_workflow.html) contains detailed information on how to use the toolbox within the IDEAS platform, the parameters that can be used, and the expected output.
@@ -33,6 +35,8 @@ Available tools are:
 
 - `caiman_isx_academic__caiman_workflow`
 - `caiman_isx_academic__motion_correction`
+- `caiman_isx_academic__source_extraction`
+- `caiman_isx_academic__spike_extraction`
 
 The command will excute the tool with inputs specified in the `inputs` folder. The output will be saved in the `outputs` folder.
 

@@ -48,7 +48,7 @@ def generate_cell_set_previews(
             os.path.basename(cellset_filename)
         )[0]
         output_traces_preview_filepath = (
-            os.path.join(output_dir, "traces_" + cellset_basename) + ".png"
+            os.path.join(output_dir, "traces_" + cellset_basename) + ".svg"
         )
         save_neural_traces_preview(
             cell_set_file=cellset_filename,
@@ -63,7 +63,7 @@ def generate_cell_set_previews(
 
         # footprints preview
         output_footprints_preview_filepath = (
-            os.path.join(output_dir, "footprints_" + cellset_basename) + ".png"
+            os.path.join(output_dir, "footprints_" + cellset_basename) + ".svg"
         )
         save_footprints_preview(
             cell_set_file=cellset_filename,
@@ -93,11 +93,11 @@ def generate_event_set_preview(eventset_filename: str, output_dir: str = None):
         0
     ]
     output_events_preview_filepath = (
-        os.path.join(output_dir, "preview_" + eventset_basename) + ".png"
+        os.path.join(output_dir, "preview_" + eventset_basename) + ".svg"
     )
     eventset_preview_obj = EventSetPreview(
         input_eventset_filepath=eventset_filename,
-        output_png_filepath=output_events_preview_filepath,
+        output_svg_filepath=output_events_preview_filepath,
     )
     eventset_preview_obj.generate_preview()
     logger.info(
@@ -683,12 +683,12 @@ def _plot_rigid_shifts(mc_obj, vertical_line_indices=None):
     plt.xlabel("frame")
 
     plt.tight_layout()
-    rigid_shifts_preview_filename = "preview_rigid_shifts.png"
+    rigid_shifts_preview_filename = "preview_rigid_shifts.svg"
     fig.savefig(
         rigid_shifts_preview_filename,
         dpi=300,
     )
-    plt.close()
+    plt.close(fig)
 
 
 def _plot_piecewise_rigid_shifts(mc_obj, vertical_line_indices=None):
@@ -717,13 +717,13 @@ def _plot_piecewise_rigid_shifts(mc_obj, vertical_line_indices=None):
 
     plt.tight_layout()
     piecewise_rigid_shifts_preview_filename = (
-        "preview_piecewise_rigid_shifts.png"
+        "preview_piecewise_rigid_shifts.svg"
     )
     fig.savefig(
         piecewise_rigid_shifts_preview_filename,
         dpi=300,
     )
-    plt.close()
+    plt.close(fig)
 
 
 def generate_caiman_motion_corrected_previews(
@@ -836,10 +836,11 @@ def generate_initialization_images_preview(
 
         plt.tight_layout()
         plt.savefig(
-            os.path.join(output_dir, "initialization_images.png"),
+            os.path.join(output_dir, "initialization_images.svg"),
             bbox_inches="tight",
             dpi=300,
         )
+        plt.close(fig)
     except Exception as e:
         logger.warning(
             f"Initialization images (pnr, correlation, search) could not be generated: {str(e)}"

@@ -1,0 +1,88 @@
+{
+    "caiman_isx_academic__source_extraction": {
+        "caiman_output": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "caiman_output"
+        },
+        "cellset_raw": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "cellset_raw"
+        },
+        "cellset_denoised": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "cellset_denoised"
+        },
+        "neural_events": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "neural_events"
+        },
+        "initialization_images": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "initialization_images"
+        },
+        "preview_neural_events": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "neural_events_preview"
+        },
+        "traces_cellset_raw": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "raw_cell_set_traces"
+        },
+        "footprints_cellset_raw": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "raw_cell_set_footprints"
+        },
+        "traces_cellset_denoised": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "denoised_cell_set_traces"
+        },
+        "footprints_cellset_denoised": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "denoised_cell_set_footprints"
+        },
+        "traces_global_cellset": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "caiman_output_traces"
+        },
+        "footprints_global_cellset": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "caiman_output_footprints"
+        }
+    }
+}
