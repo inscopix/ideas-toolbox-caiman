@@ -10,7 +10,6 @@ import os
 import ast
 import cv2
 import psutil
-from matplotlib.image import imsave
 import caiman as cm
 from caiman.source_extraction.cnmf import params as params
 from caiman.motion_correction import MotionCorrect
@@ -18,7 +17,7 @@ from caiman.source_extraction import cnmf
 from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
 from toolbox.utils.exceptions import IdeasError
 from toolbox.utils.utilities import movie_series, cell_set_series
-from toolbox.utils.utilities import get_file_size
+from toolbox.utils.utilities import get_file_size, copy_isxd_extra_properties
 from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
@@ -1345,6 +1344,14 @@ def spike_extraction(
             logger.warning(
                 f"Neural events preview could not be generated for file {os.path.basename(eventset_filename)}"
             )
+
+    logger.info(
+        "Copying extra properties from input isxd cell sets to output isxd files"
+    )
+    copy_isxd_extra_properties(
+        input_isxd_files=input_cellset_files,
+        outputs_isxd_files=[cellset_denoised_filenames, eventset_filenames],
+    )
 
     # generate metadata
     logger.info("Generating spike extraction metadata")

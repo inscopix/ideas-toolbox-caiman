@@ -86,6 +86,72 @@ def read_isxd_metadata(input_filename):
         )
 
 
+def write_isxd_metadata(
+    filename, json_metadata, sizeof_size_t=8, endianness="little"
+):
+    """
+    Writes json metadata to an .isxd file
+
+    Arguments
+    ---------
+    filename : str
+        The .isxd filename
+    json_metadata : dict
+        Metadata represented as a json dictionary
+    sizeof_size_t : int > 0
+        Number of bytes used to represent a size_t type variable in C++
+    endianness
+        Endianness of your machine
+    """
+
+    with open(filename, "rb+") as infile:
+        infile.seek(-sizeof_size_t, 2)
+        header_size = infile.read(sizeof_size_t)
+        header_size = int.from_bytes(header_size, endianness)
+        bottom_offset = header_size + 1 + sizeof_size_t
+        infile.seek(-bottom_offset, 2)
+
+        infile.truncate()
+        # process non-ascii characters correctly
+        string_json = (
+            json.dumps(json_metadata, indent=4, ensure_ascii=False) + "\0"
+        )
+        infile.write(bytes(string_json, "utf-8"))
+
+        # calculate number of bytes in string by encoding to utf-8
+        string_json = string_json.encode("utf-8")
+        json_length = int.to_bytes(
+            len(string_json) - 1, sizeof_size_t, endianness
+        )
+        infile.write(json_length)
+
+
+def copy_isxd_extra_properties(
+    input_isxd_files: List[str], outputs_isxd_files: List[List[str]]
+):
+    """
+    Copy extra properties from input isxd files to output isxd files.
+    This can be important for downstream tools like "Map Annotations to ISXD Data"
+    which rely on certain keys in the extra properties for aligning miniscope data
+    to synchronized nVision data. IDPS does this within algorithms however since isxd
+    files are being generated outside of IDPS, the extra properties need to be manually copied.
+    """
+
+    num_files = len(input_isxd_files)
+    for output_isxd_files in outputs_isxd_files:
+        assert num_files == len(output_isxd_files)
+
+    for i in range(num_files):
+        input_isxd_metadata = read_isxd_metadata(input_isxd_files[i])
+
+        for output_isxd_files in outputs_isxd_files:
+            output_isxd_metadata = read_isxd_metadata(output_isxd_files[i])
+            output_isxd_metadata["extraProperties"] = input_isxd_metadata[
+                "extraProperties"
+            ]
+            write_isxd_metadata(output_isxd_files[i], output_isxd_metadata)
+
+
 def compute_sampling_rate(period_num: int, period_den: int) -> float:
     """Compute the sampling rate given the period numerator and denominator.
 
