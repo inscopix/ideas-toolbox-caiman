@@ -7,6 +7,7 @@ import numpy as np
 from toolbox.tools.caiman_isx_academic import caiman_workflow
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.utilities import read_isxd_metadata
 
 
 DATA_DIR = "/ideas/data"
@@ -1704,3 +1705,51 @@ def test_caiman_cnmfe_workflow_unordered_isxd_movie_series():
         "microscope": {"focus": None},
     }
     assert exp_eventset_metadata2 == act_eventset_metadata2
+
+
+def test_caiman_cnmfe_workflow_isxd_extra_properties():
+    """Verify that the CaImAn CNMF-E workflow correctly copies the extra properties
+    in the json metadata of input isxd files to output isxd files"""
+    input_movie_files = [
+        os.path.join(DATA_DIR, "movie_part1_108x123x100.isxd"),
+        os.path.join(DATA_DIR, "movie_part2_108x123x63.isxd"),
+    ]
+
+    caiman_workflow(
+        input_movie_files=input_movie_files,
+        overwrite_analysis_table_params=False,
+        min_corr=0.5,
+        min_pnr=5,
+        gSig_filt=3,
+    )
+
+    input_movie0_metadata = read_isxd_metadata(input_movie_files[0])
+    input_movie1_metadata = read_isxd_metadata(input_movie_files[1])
+
+    # first part of output series
+    output0_files = [
+        "cellset_raw.000.isxd",
+        "cellset_denoised.000.isxd",
+        "neural_events.000.isxd",
+    ]
+    for output0_file in output0_files:
+        output0_file_metadata = read_isxd_metadata(output0_file)
+        assert (
+            "extraProperties" in output0_file_metadata
+            and output0_file_metadata["extraProperties"]
+            == input_movie0_metadata["extraProperties"]
+        )
+
+    # second part of output series
+    output1_files = [
+        "cellset_raw.001.isxd",
+        "cellset_denoised.001.isxd",
+        "neural_events.001.isxd",
+    ]
+    for output1_file in output1_files:
+        output1_file_metadata = read_isxd_metadata(output1_file)
+        assert (
+            "extraProperties" in output1_file_metadata
+            and output1_file_metadata["extraProperties"]
+            == input_movie1_metadata["extraProperties"]
+        )

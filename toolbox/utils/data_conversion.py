@@ -7,10 +7,9 @@ import numpy as np
 from typing import List
 from toolbox.utils.previews import (
     generate_caiman_workflow_previews,
-    generate_caiman_motion_corrected_previews,
 )
 from toolbox.utils.metadata import generate_caiman_workflow_metadata
-from toolbox.utils.utilities import get_file_size
+from toolbox.utils.utilities import get_file_size, copy_isxd_extra_properties
 from toolbox.utils.exceptions import IdeasError
 import logging
 
@@ -253,6 +252,19 @@ def convert_caiman_output_to_isxd(
         + [global_cellset_filename],
     )
 
+    if file_ext in ["isxd"]:
+        logger.info(
+            "Copying extra properties from input isxd movies to output isxd files"
+        )
+        copy_isxd_extra_properties(
+            input_isxd_files=input_movie_files,
+            outputs_isxd_files=[
+                cellset_denoised_filenames,
+                cellset_raw_filenames,
+                eventset_filenames,
+            ],
+        )
+
     # generate previews
     logger.info("Generating data previews")
     generate_caiman_workflow_previews(
@@ -411,6 +423,15 @@ def convert_memmap_data_to_output_files(
             f"Motion-corrected movie saved "
             f"({os.path.basename(mc_movie_filename)}, "
             f"size: {get_file_size(mc_movie_filename)})"
+        )
+
+    if file_ext in ["isxd"] and output_movie_format == "isxd":
+        logger.info(
+            "Copying extra properties from input isxd movies to output isxd movies"
+        )
+        copy_isxd_extra_properties(
+            input_isxd_files=input_movie_files,
+            outputs_isxd_files=[mc_movie_filenames],
         )
 
     return mc_movie_filenames, num_frames_per_movie, frame_index_cutoffs
