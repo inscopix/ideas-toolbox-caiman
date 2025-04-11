@@ -101,18 +101,6 @@ def generate_event_set_preview(eventset_filename: str, output_dir: str = None):
     )
     eventset_preview_obj.generate_preview()
 
-    # if preview file weighs more than 2MB, output again with a lower dpi
-    dpi = 300
-    to_MB = 1 / (1024**2)
-    while abs(os.path.getsize(output_events_preview_filepath)) * to_MB > 2:
-        dpi *= 0.8
-        f_size = abs(os.path.getsize(output_events_preview_filepath)) * to_MB
-        logger.info(
-            f"Neural events preview file was too big ({round(f_size, 2)}"
-            f" > 2MB). Outputting again with dpi={round(dpi, 0)}."
-        )
-        eventset_preview_obj.generate_preview(dpi=dpi)
-
     logger.info(
         f"Neural events preview saved "
         f"({os.path.basename(output_events_preview_filepath)}, "
