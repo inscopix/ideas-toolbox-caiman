@@ -100,6 +100,7 @@ def generate_event_set_preview(eventset_filename: str, output_dir: str = None):
         output_svg_filepath=output_events_preview_filepath,
     )
     eventset_preview_obj.generate_preview()
+
     logger.info(
         f"Neural events preview saved "
         f"({os.path.basename(output_events_preview_filepath)}, "
@@ -809,7 +810,7 @@ def generate_initialization_images_preview(
         )
         search_image = correlation_image * pnr_image
 
-        fig, ax = plt.subplots(nrows=1, ncols=3)
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4))
 
         # PNR image
         pnr_plot_img = ax[0].imshow(pnr_image)
@@ -834,8 +835,8 @@ def generate_initialization_images_preview(
         ):
             add_colorbar(target_axis=ax[i], img=im)
 
-        plt.tight_layout()
-        plt.savefig(
+        fig.tight_layout()
+        fig.savefig(
             os.path.join(output_dir, "initialization_images.svg"),
             bbox_inches="tight",
             dpi=300,
@@ -848,3 +849,31 @@ def generate_initialization_images_preview(
         correlation_image = None
 
     return correlation_image
+
+
+def generate_local_correlation_image_preview(
+    correlation_image,
+    output_dir: str = None,
+):
+    """Generate preview for the local correlation image.
+    :param correlation_image: local correlation image computed during CNMF-E initialization
+    :param output_dir: path to the output directory
+    """
+    if output_dir is None:
+        output_dir = os.getcwd()
+
+    try:
+        logger.info("Generating correlation image preview")
+
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        ax.imshow(correlation_image, cmap="gray")
+        ax.axis("off")
+        fig.tight_layout()
+        plt.savefig(
+            "local_corr_img_preview.png", bbox_inches="tight", pad_inches=0.1
+        )
+
+    except Exception as e:
+        logger.warning(
+            f"Correlation image preview could not be generated: {str(e)}"
+        )

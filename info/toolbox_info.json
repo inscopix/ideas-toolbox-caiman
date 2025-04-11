@@ -23,7 +23,7 @@
             "name": "CaImAn Cell Extraction Workflow",
             "key": "caiman_isx_academic__caiman_workflow",
             "help": "The CaImAn cell identification workflow performs motion correction using the NorMCorre algorithm, cell identification using the CNMF/CNMF-E algorithm, and automated component evaluation.",
-            "version": "1.2.2",
+            "version": "1.3.0",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
@@ -128,6 +128,23 @@
                         }
                     },
                     "default": false
+                },
+                {
+                    "key": "save_img",
+                    "name": "Save Template Image",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Whether to save the local correlation image as a standalone .tif file, e.g., for further use as template image in Multi-Session Registration.",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "Settings",
+                            "group_order": 1
+                        }
+                    },
+                    "default": true
                 },
                 {
                     "key": "fr",
@@ -1038,6 +1055,17 @@
                                 "isxd"
                             ],
                             "file_type": "neural_events"
+                        },
+                        {
+                            "result_key": "local_corr_img",
+                            "result_name": "Template Image",
+                            "help": "Local correlation image in TIF format",
+                            "required": false,
+                            "multiple": false,
+                            "file_formats": [
+                                "tif"
+                            ],
+                            "file_type": "image"
                         }
                     ]
                 }
@@ -1562,7 +1590,7 @@
             "name": "CaImAn Source Extraction",
             "key": "caiman_isx_academic__source_extraction",
             "help": "Extract spatial footprints and temporal activity of cells using the CaImAn CNMF/CNMF-E algorithm.",
-            "version": "1.0.1",
+            "version": "1.2.0",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
@@ -1667,6 +1695,23 @@
                         }
                     },
                     "default": false
+                },
+                {
+                    "key": "save_img",
+                    "name": "Save Template Image",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Whether to save the local correlation image as a standalone .tif file, e.g., for further use as template image in Multi-Session Registration.",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "Settings",
+                            "group_order": 1
+                        }
+                    },
+                    "default": true
                 },
                 {
                     "key": "fr",
@@ -2286,6 +2331,17 @@
                                 "isxd"
                             ],
                             "file_type": "neural_events"
+                        },
+                        {
+                            "result_key": "local_corr_img",
+                            "result_name": "Template Image",
+                            "help": "Local correlation image in TIF format",
+                            "required": false,
+                            "multiple": false,
+                            "file_formats": [
+                                "tif"
+                            ],
+                            "file_type": "image"
                         }
                     ]
                 }
