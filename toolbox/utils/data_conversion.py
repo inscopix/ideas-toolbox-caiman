@@ -409,3 +409,22 @@ def convert_memmap_data_to_output_files(
         )
 
     return mc_movie_filenames, num_frames_per_movie, frame_index_cutoffs
+
+
+def save_local_correlation_image(
+    correlation_image,
+    image_output_filename,
+):
+    """
+    Save the local correlation image as a standalone .tif file, e.g.,
+    for further use as template image in Multi-Session Registration.
+
+    :param correlation_image: local correlation image computed during CNMF-E initialization
+    :param image_output_filename: path to the output .tif file to be written
+    """
+    tifffile.tifffile.imwrite(image_output_filename, correlation_image)
+    logger.info(
+        "Local correlation image saved"
+        f"({os.path.basename(image_output_filename)}, )"
+        f"size: {get_file_size(image_output_filename)})"
+    )

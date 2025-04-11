@@ -634,10 +634,15 @@ def save_neural_traces_preview(
         for x in vertical_line_indices:
             plt.axvline(x=time[x], color="gray", ls="--", lw=1, alpha=0.3)
 
-    plt.tight_layout()
+    fig.tight_layout()
 
     logger.info("Saving traces figure...")
-    fig.savefig(output_preview_filename, dpi=300)
+    fig.savefig(
+        output_preview_filename,
+        bbox_inches="tight",
+        pad_inches=0.1,
+        dpi=300,
+    )
 
     logger.info(
         f"Traces preview saved ({os.path.basename(output_preview_filename)}, size: {get_file_size(output_preview_filename)})"
@@ -736,9 +741,11 @@ def save_footprints_preview(
     # invert y-axis to match orientation in IDPS (y=0 at top of image and y=max at bottom)
     ax.invert_yaxis()
 
-    plt.tight_layout()
+    fig.tight_layout()
     fig.savefig(
         output_preview_filename,
+        bbox_inches="tight",
+        pad_inches=0.1,
         dpi=300,
     )
 
@@ -921,7 +928,7 @@ class EventSetPreview(object):
 
         return mean_inter_event_interval[~np.isnan(mean_inter_event_interval)]
 
-    def generate_preview(self):
+    def generate_preview(self, dpi=300):
         """Plot and save event set preview. Preview generates 4 subplots
         1. Raster
         2. A time series of mean event rate across neurons
@@ -1066,4 +1073,4 @@ class EventSetPreview(object):
                     axis.spines["left"].set_color(self.foreground_color)
 
             # Saving the preview
-            plt.savefig(self.output_png_filepath, dpi=300)
+            fig.savefig(self.output_png_filepath, dpi=dpi)
