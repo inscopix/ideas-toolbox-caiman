@@ -3,7 +3,6 @@ import isx
 import math
 import cv2
 import numpy as np
-import pandas as pd
 import imageio.v2 as iio
 from PIL import Image, ImageSequence
 import matplotlib.pyplot as plt
@@ -15,8 +14,10 @@ from toolbox.utils.plots import (
     save_footprints_preview,
     EventSetPreview,
 )
-from toolbox.utils.utilities import get_num_cells_by_status
-from toolbox.utils.utilities import get_file_size
+from toolbox.utils.utilities import (
+    get_num_cells_by_status,
+    get_file_size,
+)
 import logging
 
 logger = logging.getLogger()
