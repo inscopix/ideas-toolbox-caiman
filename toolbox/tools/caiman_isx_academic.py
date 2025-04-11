@@ -1005,7 +1005,9 @@ def source_extraction(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -1094,7 +1096,9 @@ def source_extraction(
         # Input Data
         input_movie_files=input_movie_files,
         parameters_file=parameters_file,
+        # Setting
         overwrite_analysis_table_params=overwrite_analysis_table_params,
+        save_img=save_img,
         # Dataset
         fr=fr,
         decay_time=decay_time,
