@@ -23,6 +23,7 @@ from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
     write_cell_statuses,
+    save_local_correlation_image,
 )
 from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
 from toolbox.utils.previews import (
@@ -30,6 +31,7 @@ from toolbox.utils.previews import (
     generate_initialization_images_preview,
     generate_cell_set_previews,
     generate_event_set_preview,
+    generate_local_correlation_image_preview,
 )
 from toolbox.utils.metadata import (
     generate_caiman_motion_correction_metadata,
@@ -46,7 +48,9 @@ def _run_caiman_workflow(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -115,6 +119,7 @@ def _run_caiman_workflow(
     SETTINGS
     :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
                                             will be overwritten by the values specified in the parameters file
+    :param save_img: if True, local correlation image will be saved as a standalone .tif file
 
     DATASET
     :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
@@ -454,6 +459,17 @@ def _run_caiman_workflow(
         f"size: {get_file_size(caiman_output_filename)})"
     )
 
+    # (optional) save local correlation image
+    if save_img:
+        image_output_filename = os.path.join(output_dir, "local_corr_img.tif")
+        save_local_correlation_image(
+            correlation_image=correlation_image,
+            image_output_filename=image_output_filename,
+        )
+        generate_local_correlation_image_preview(
+            correlation_image=correlation_image,
+        )
+
     # ensure some cells were identified
     num_cells = len(model.estimates.C)
     if num_cells < 1:
@@ -477,7 +493,9 @@ def caiman_workflow(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -545,6 +563,7 @@ def caiman_workflow(
     SETTINGS
     :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
                                             will be overwritten by the values specified in the parameters file
+    :param save_img: if True, local correlation image will be saved as a standalone .tif file
 
     DATASET
     :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
@@ -612,7 +631,9 @@ def caiman_workflow(
         # Input Data
         input_movie_files=input_movie_files,
         parameters_file=parameters_file,
+        # Setting
         overwrite_analysis_table_params=overwrite_analysis_table_params,
+        save_img=save_img,
         # Dataset
         fr=fr,
         decay_time=decay_time,
