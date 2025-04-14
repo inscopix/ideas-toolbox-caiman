@@ -967,6 +967,7 @@ class EventSetPreview(object):
         with plt.style.context(self.background_color):
             if np.sum(rasters.ravel()) > 0:
                 # Raster plot
+                # show as heatmap image instead of event plot in order to reduce preview file size
                 num_cells = rasters.shape[0]
                 rasters_img = np.zeros((num_cells, self.num_samples))
                 for idx in range(num_cells):
