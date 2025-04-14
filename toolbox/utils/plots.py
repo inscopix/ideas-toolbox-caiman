@@ -934,7 +934,7 @@ class EventSetPreview(object):
 
         return mean_inter_event_interval[~np.isnan(mean_inter_event_interval)]
 
-    def generate_preview(self, dpi=300):
+    def generate_preview(self):
         """Plot and save event set preview. Preview generates 4 subplots
         1. Raster
         2. A time series of mean event rate across neurons
@@ -967,26 +967,23 @@ class EventSetPreview(object):
         with plt.style.context(self.background_color):
             if np.sum(rasters.ravel()) > 0:
                 # Raster plot
+                # show as heatmap image instead of event plot in order to reduce preview file size
                 num_cells = rasters.shape[0]
-                for i in range(num_cells):
-                    ind = np.where(rasters[i, :] == 1)[0]
-                    if len(ind) > 0:
-                        ax[0].plot(
-                            t[ind],
-                            i * np.ones(len(ind)),
-                            color=self.foreground_color,
-                            ls="",
-                            marker=".",
-                            markersize=self.markersize,
-                        )
+                rasters_img = np.zeros((num_cells, self.num_samples))
+                for idx in range(num_cells):
+                    offsets = np.where(rasters[idx, :] == 1)[0]
+                    rasters_img[idx, offsets] = 1
+                ax[0].imshow(
+                    rasters_img,
+                    aspect="auto",
+                    interpolation="none",
+                    origin="lower",
+                    cmap="gray",
+                    extent=(t[0], t[-1], -0.5, num_cells - 0.5),
+                )
                 ax[0].set_xlabel("Time (s)", fontsize=self.axis_label_fontsize)
                 ax[0].set_ylabel("Cell #", fontsize=self.axis_label_fontsize)
-                ax[0].set_yticks(
-                    np.linspace(0, num_cells - 1, 5).astype(int),
-                    np.linspace(0, num_cells - 1, 5).astype(int),
-                )
-                ax[0].set_ylim((-1, num_cells))
-                ax[0].set_xlim((t[0] - t[1], int(t[-1]) + 1))
+                ax[0].set_yticks(np.linspace(0, num_cells - 1, 5).astype(int))
 
                 # Displaying the average event rate across neurons
                 mean_event_rate_across_neurons = (
@@ -1079,5 +1076,5 @@ class EventSetPreview(object):
                     axis.spines["left"].set_color(self.foreground_color)
 
             # Saving the preview
-            plt.savefig(self.output_svg_filepath, dpi=dpi)
+            plt.savefig(self.output_svg_filepath)
             plt.close(fig)
