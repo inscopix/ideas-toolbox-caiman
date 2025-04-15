@@ -127,7 +127,9 @@ def write_isxd_metadata(
 
 
 def copy_isxd_extra_properties(
-    input_isxd_files: List[str], outputs_isxd_files: List[List[str]]
+    input_isxd_files: List[str],
+    original_input_indices: List[int],
+    outputs_isxd_files: List[List[str]],
 ):
     """
     Copy extra properties from input isxd files to output isxd files.
@@ -142,7 +144,8 @@ def copy_isxd_extra_properties(
         assert num_files == len(output_isxd_files)
 
     for i in range(num_files):
-        input_isxd_metadata = read_isxd_metadata(input_isxd_files[i])
+        input_index = original_input_indices[i]
+        input_isxd_metadata = read_isxd_metadata(input_isxd_files[input_index])
 
         for output_isxd_files in outputs_isxd_files:
             output_isxd_metadata = read_isxd_metadata(output_isxd_files[i])
