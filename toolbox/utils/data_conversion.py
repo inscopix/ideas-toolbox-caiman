@@ -258,6 +258,7 @@ def convert_caiman_output_to_isxd(
         )
         copy_isxd_extra_properties(
             input_isxd_files=input_movie_files,
+            original_input_indices=original_input_movie_indices,
             outputs_isxd_files=[
                 cellset_denoised_filenames,
                 cellset_raw_filenames,
@@ -431,6 +432,7 @@ def convert_memmap_data_to_output_files(
         )
         copy_isxd_extra_properties(
             input_isxd_files=input_movie_files,
+            original_input_indices=original_input_movie_indices,
             outputs_isxd_files=[mc_movie_filenames],
         )
 

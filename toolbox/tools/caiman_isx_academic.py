@@ -316,6 +316,9 @@ def _run_caiman_workflow(
         original_input_movie_indices = [
             input_movie_files.index(f) for f in original_input_movie_files
         ]
+        logger.info(
+            f"Sorted input movies chronologically - original: {original_input_movie_files}, sorted: {input_movie_files}"
+        )
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
@@ -877,6 +880,9 @@ def motion_correction(
         original_input_movie_indices = [
             input_movie_files.index(f) for f in original_input_movie_files
         ]
+        logger.info(
+            f"Sorted input movies chronologically - original: {original_input_movie_files}, sorted: {input_movie_files}"
+        )
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
@@ -1193,6 +1199,9 @@ def spike_extraction(
     original_input_cellset_indices = [
         input_cellset_files.index(f) for f in original_input_cellset_files
     ]
+    logger.info(
+        f"Sorted input cell sets chronologically - original: {original_input_cellset_files}, sorted: {input_cellset_files}"
+    )
 
     logger.info(
         "Converting input parameters to match CaImAn's expected format"
@@ -1350,6 +1359,7 @@ def spike_extraction(
     )
     copy_isxd_extra_properties(
         input_isxd_files=input_cellset_files,
+        original_input_indices=original_input_cellset_indices,
         outputs_isxd_files=[cellset_denoised_filenames, eventset_filenames],
     )
 
