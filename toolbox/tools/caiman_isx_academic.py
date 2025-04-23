@@ -5,26 +5,28 @@ set_start_method("spawn", force=True)
 from typing import Optional, List
 import numpy as np
 import isx
+import logging
 import shutil
 import os
 import ast
 import cv2
 import psutil
 import caiman as cm
-from caiman.source_extraction.cnmf import params as params
 from caiman.motion_correction import MotionCorrect
 from caiman.source_extraction import cnmf
+from caiman.source_extraction.cnmf import params as params
 from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
-from toolbox.utils.exceptions import IdeasError
-from toolbox.utils.utilities import movie_series, cell_set_series
-from toolbox.utils.utilities import get_file_size, copy_isxd_extra_properties
 from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
     write_cell_statuses,
     save_local_correlation_image,
 )
-from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
+from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.metadata import (
+    generate_caiman_motion_correction_metadata,
+    generate_caiman_spike_extraction_metadata,
+)
 from toolbox.utils.previews import (
     generate_caiman_motion_corrected_previews,
     generate_initialization_images_preview,
@@ -32,12 +34,14 @@ from toolbox.utils.previews import (
     generate_event_set_preview,
     generate_local_correlation_image_preview,
 )
-from toolbox.utils.metadata import (
-    generate_caiman_motion_correction_metadata,
-    generate_caiman_spike_extraction_metadata,
+from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
+from toolbox.utils.utilities import (
+    movie_series,
+    cell_set_series,
+    get_file_size,
+    copy_isxd_extra_properties,
+    read_isxd_metadata,
 )
-
-import logging
 
 logger = logging.getLogger()
 
@@ -305,7 +309,7 @@ def _run_caiman_workflow(
             )
 
     # determine input data frame rate & determine original input order
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    file_ext = os.path.splitext(input_movie_files[0])[1][1:].lower()
     original_input_movie_indices = list(range(len(input_movie_files)))
     if file_ext == "isxd":
         # validate input files form a valid series
@@ -451,6 +455,11 @@ def _run_caiman_workflow(
     # add correlation image to output file
     if "correlation_image" in locals():
         model.estimates.Cn = correlation_image
+
+    # include first isxd movie's metadata in output model
+    if file_ext == "isxd":
+        isxd_metadata = read_isxd_metadata(input_movie_files[0])
+        model.movie_metadata = isxd_metadata
 
     # save CaImAn output
     caiman_output_filename = os.path.join(output_dir, "caiman_output.hdf5")
@@ -871,7 +880,7 @@ def motion_correction(
     # determine input data frame rate & determine original input order
     file_ext = os.path.splitext(input_movie_files[0])[1][1:]
     original_input_movie_indices = list(range(len(input_movie_files)))
-    if file_ext == "isxd":
+    if file_ext.lower() == "isxd":
         # validate input files form a valid series
         # and order them by their start time
         # (keep track of the original order of the input files since this is used to statically name output files)
@@ -891,7 +900,7 @@ def motion_correction(
         )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext.lower() in ["avi", "mp4"]:
         cap = cv2.VideoCapture(input_movie_files[0])
         fr = cap.get(cv2.CAP_PROP_FPS)
         parameters.change_params(params_dict={"fr": fr})

@@ -28,6 +28,13 @@
             ],
             "custom_string": "neural_events"
         },
+        "local_corr_img": {
+            "pattern": [
+                "input_movie_files",
+                "custom_string"
+            ],
+            "custom_string": "local_corr_img"
+        },
         "initialization_images": {
             "pattern": [
                 "input_movie_files",
