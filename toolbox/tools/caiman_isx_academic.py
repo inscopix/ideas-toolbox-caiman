@@ -309,7 +309,7 @@ def _run_caiman_workflow(
             )
 
     # determine input data frame rate & determine original input order
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    file_ext = os.path.splitext(input_movie_files[0])[1][1:].lower()
     original_input_movie_indices = list(range(len(input_movie_files)))
     if file_ext == "isxd":
         # validate input files form a valid series
@@ -454,7 +454,6 @@ def _run_caiman_workflow(
         model.estimates.Cn = correlation_image
 
     # include first isxd movie's metadata in output model
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
     if file_ext == "isxd":
         isxd_metadata = read_isxd_metadata(input_movie_files[0])
         model.movie_metadata = isxd_metadata
@@ -878,7 +877,7 @@ def motion_correction(
     # determine input data frame rate & determine original input order
     file_ext = os.path.splitext(input_movie_files[0])[1][1:]
     original_input_movie_indices = list(range(len(input_movie_files)))
-    if file_ext == "isxd":
+    if file_ext.lower() == "isxd":
         # validate input files form a valid series
         # and order them by their start time
         # (keep track of the original order of the input files since this is used to statically name output files)
@@ -895,7 +894,7 @@ def motion_correction(
         )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext.lower() in ["avi", "mp4"]:
         cap = cv2.VideoCapture(input_movie_files[0])
         fr = cap.get(cv2.CAP_PROP_FPS)
         parameters.change_params(params_dict={"fr": fr})
