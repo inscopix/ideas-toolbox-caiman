@@ -1,11 +1,15 @@
-import os
-import json
+from beartype import beartype
+from beartype.typing import List, Optional, Tuple, Union
 import isx
-import struct
-import numpy as np
-from typing import List
-from toolbox.utils.exceptions import IdeasError
+import json
 import logging
+from numpy import ndarray
+import numpy as np
+import pandas as pd
+import os
+import struct
+from toolbox.utils.exceptions import IdeasError
+from typing import List
 
 logger = logging.getLogger()
 
@@ -482,3 +486,136 @@ def cell_set_series(files: List[str]) -> List:
         )
 
     return _sort_isxd_files_by_start_time(files)
+
+
+@beartype
+def validate_caiman_msr_inputs(
+    *,
+    cellset_paths: List[str],
+    template_paths: List[str],
+    eventset_paths: Optional[List[str]],
+    enclosed_thr: Optional[Union[float, int]],
+    use_cell_status: str,
+    min_n_regist_sess: int,
+) -> Tuple[List[Optional[str]], Optional[Union[float, int]], int]:
+    """
+    Validate CaImAn Multi-Session Registration input files and parameters.
+    """
+    # validate input files
+    # # ensure there are at least 2 cellsets
+    assert len(cellset_paths) > 1, (
+        "Only 1 cellset was provided. Please provide at least 2 cellsets and "
+        "corresponding template images as input of this tool."
+    )
+
+    # # ensure there are as many template images as there are cellsets
+    assert len(cellset_paths) == len(template_paths), (
+        f"There were {len(cellset_paths)} cellsets and "
+        f"{len(template_paths)} template images. Please provide as many "
+        "template images as cellsets."
+    )
+
+    # # ensure there are as many eventsets, if provided, as there are cellsets
+    if (
+        isinstance(eventset_paths, list)
+        and isinstance(eventset_paths[0], str)
+        and len(eventset_paths[0]) > 0
+    ):
+        assert len(cellset_paths) == len(eventset_paths), (
+            f"There were {len(cellset_paths)} cellsets and "
+            f"{len(eventset_paths)} eventsets. Please provide as many "
+            "eventsets as cellsets."
+        )
+    else:
+        eventset_paths = [None] * len(cellset_paths)
+
+    # validate parameters
+    # 1. ensure type of `enclosed_thr`
+    if enclosed_thr == 0:
+        enclosed_thr = None
+
+    # 2. ensure correct value of `use_cell_status``
+    valid_statuses = ["accepted", "accepted & undecided", "all"]
+    assert use_cell_status in valid_statuses, (
+        f"`use_cell_status` {use_cell_status} not recognized."
+        f"It should be one of {valid_statuses}."
+    )
+
+    # 3. log a warning if `min_n_regist_sess` is above the number of
+    # provided cellsets
+    if min_n_regist_sess > len(cellset_paths):
+        logger.warning(
+            f"`min_n_regist_sess` ({min_n_regist_sess}) > number of provided "
+            f"cellsets ({len(cellset_paths)}). Setting `min_n_regist_sess` "
+            f"to {len(cellset_paths)} instead."
+        )
+        min_n_regist_sess = len(cellset_paths)
+
+    return eventset_paths, enclosed_thr, min_n_regist_sess
+
+
+@beartype
+def transform_assignments_matrix(
+    *,
+    assignments: ndarray,
+    min_n_regist_sess: int,
+    cell_names_list: List[List[str]],
+) -> Tuple[pd.DataFrame, int]:
+    """
+    Transform and filter assignments matrix to add homogeneous cell names
+    across sessions and to only keep cells registered across at least
+    `min_n_regist_sess` sessions.
+    """
+    n_sessions = assignments.shape[1]
+
+    # transform the assignments matrix into a pandas DataFrame
+    # for easier transformations
+    df_assignments = pd.DataFrame(data=assignments)
+
+    # count number of registered sessions for each cell
+    df_assignments["n_reg_sess"] = df_assignments.notna().sum(axis=1)
+
+    # get position of the first NaN value for each row,
+    # to enable advanced sorting
+    df_first_nan = pd.DataFrame(
+        np.where(df_assignments.isna()), index=["idx_row", "nan_loc"]
+    ).T.drop_duplicates(subset="idx_row")
+    df_assignments.loc[df_first_nan["idx_row"].values, "first_NaN_pos"] = (
+        df_first_nan["nan_loc"].values
+    )
+
+    # sort df by decreasing order of both number of registered sessions
+    # and position of first NaN
+    df_assignments = df_assignments.sort_values(
+        by=["n_reg_sess", "first_NaN_pos"], ascending=False
+    )
+
+    # get number of cells registered across all sessions
+    n_reg_cells_all = len(df_assignments.query(f"n_reg_sess == {n_sessions}"))
+
+    # add registered cell names
+    n_digits = len(str(assignments.shape[0]))
+    df_assignments.insert(
+        loc=0,
+        column="name",
+        value=[f"C{idx:0{n_digits}g}" for idx in range(assignments.shape[0])],
+    )
+
+    # only keep cells registered across at least `min_n_regist_sess` sessions
+    df_assignments = df_assignments.query(f"n_reg_sess >= {min_n_regist_sess}")
+
+    # add input cellsets' corresponding cell names
+    for idx_sess, cell_names in enumerate(cell_names_list):
+        col_name = f"name_in_{idx_sess}"
+        df_assignments.insert(df_assignments.shape[1], col_name, "")
+        cell_indices = df_assignments[idx_sess].dropna().astype(int)
+        df_assignments.loc[cell_indices.index, col_name] = [
+            cell_names[x] for x in cell_indices.values
+        ]
+
+    # clean up df
+    df_assignments = df_assignments.drop(
+        columns=["first_NaN_pos"]
+    ).reset_index(drop=True)
+
+    return df_assignments, n_reg_cells_all

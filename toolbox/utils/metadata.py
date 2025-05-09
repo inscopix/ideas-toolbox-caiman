@@ -1,23 +1,32 @@
-import os
-import json
-import isx
+from beartype import beartype
+from beartype.typing import List, Optional, Tuple, Union
+from caiman.source_extraction.cnmf.cnmf import load_CNMF
 import cv2
-import pandas as pd
+import isx
+import json
+import logging
+from numpy import ndarray
 import numpy as np
+import os
+import pandas as pd
+from pathlib import Path
 from PIL import Image
-from typing import List
+from scipy.sparse import csc_matrix
+
+# from typing import List
+from toolbox.utils import config
+from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.metrics import (
+    compute_alignment_metrics,
+    compute_distance_matrix_metrics,
+)
 from toolbox.utils.utilities import (
     compute_sampling_rate,
     compute_end_time,
-)
-from toolbox.utils.utilities import (
     get_num_cells_by_status,
     read_isxc_metadata,
     read_isxd_metadata,
 )
-from toolbox.utils.exceptions import IdeasError
-from caiman.source_extraction.cnmf.cnmf import load_CNMF
-import logging
 
 logger = logging.getLogger()
 
@@ -661,4 +670,163 @@ def generate_caiman_spike_extraction_metadata(
     # save metadata to file
     output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
     with open(output_metadata_filename, "w") as f:
+        json.dump(metadata, f, indent=4)
+
+
+@beartype
+def create_msr_output_metadata(
+    *,
+    spatial: List[csc_matrix],
+    dims: Tuple[int, int],
+    df_assignments: pd.DataFrame,
+    n_reg_cells_all: int,
+    templates: List[ndarray],
+    aligned_templates: List[ndarray],
+    xy_shifts: Union[List[List[Tuple[float, float]]], List[ndarray]],
+    D: List[List[ndarray]],
+    D_cm: List[List[ndarray]],
+    cs_out_paths: List[str],
+    es_out_paths: List[Optional[str]],
+    output_dir: str,
+) -> None:
+    """
+    Create metadata for all output files of CaImAn Multi-Session Registration.
+    """
+    # get metadata values for CaImAn_MSR_output.h5
+    n_sessions = len(spatial)
+    n_cells_list = [x.shape[1] for x in spatial]
+    yield_perc = 100 * n_reg_cells_all / np.min(n_cells_list)
+    (
+        mean_overlap,
+        mean_centroid_dist,
+        mean_overlap_nonreg,
+        mean_centroid_dist_nonreg,
+    ) = compute_distance_matrix_metrics(
+        df_assignments=df_assignments,
+        D=D,
+        D_cm=D_cm,
+    )
+
+    metadata_msr_output_dict = {
+        "n_sessions": n_sessions,
+        "cell_counts": n_cells_list,
+        "n_regist_cells": n_reg_cells_all,
+        "yield": round(yield_perc, 2),
+        "mean_overlap": round(mean_overlap, 2),
+        "mean_centroid_dist": round(mean_centroid_dist, 2),
+    }
+
+    msr_output_key = Path(config.MSR_OUTPUT_FNAME).stem
+    metadata = {
+        msr_output_key: metadata_msr_output_dict,
+    }
+
+    # get metadata values for alignment_qc_metrics.csv
+    r_pre, r_post, mean_shifts, max_shifts = compute_alignment_metrics(
+        templates=templates,
+        aligned_templates=aligned_templates,
+        xy_shifts=xy_shifts,
+    )
+    mean_shifts = [round(x, 2) for x in mean_shifts]
+    max_shifts = [round(x, 2) for x in max_shifts]
+
+    metadata_align_output_dict = {
+        "n_session_pairs": n_sessions - 1,
+        "r_pre": round(r_pre, 3),
+        "r_post": round(r_post, 3),
+        "mean_shifts": f"({mean_shifts[0]}, {mean_shifts[1]})",
+        "max_shifts": f"({max_shifts[0]}, {max_shifts[1]})",
+    }
+
+    align_output_key = Path(config.ALIGN_METRICS_CSV_FNAME).stem
+    metadata.update({align_output_key: metadata_align_output_dict})
+
+    # get metadata values for CaImAn_MSR_metrics.csv
+    metadata_metrics_output_dict = {
+        "n_sessions": n_sessions,
+        "n_regist_cells": n_reg_cells_all,
+        "mean_overlap": round(mean_overlap, 2),
+        "mean_centroid_dist": round(mean_centroid_dist, 2),
+        "mean_overlap_nonreg": round(mean_overlap_nonreg, 2),
+        "mean_centroid_dist_nonreg": round(mean_centroid_dist_nonreg, 2),
+    }
+
+    metrics_output_key = Path(config.MSR_METRICS_CSV_FNAME).stem
+    metadata.update({metrics_output_key: metadata_metrics_output_dict})
+
+    # get metadata values for Inscopix cellsets and optional eventsets
+    for idx_sess, (cs_out_path, es_out_path) in enumerate(
+        zip(cs_out_paths, es_out_paths)
+    ):
+        cs = isx.CellSet.read(cs_out_path)
+        L = cs.timing.num_samples
+        fs = 1 / cs.timing.period.secs_float
+        N = cs.num_cells
+        status_list = [cs.get_cell_status(x) for x in range(N)]
+
+        metadata_isxd_outputs_dict = {
+            "Multisession registration method": "CaImAn MSR",
+            "Session index among registered sessions": idx_sess,
+            "Number of Frames": L,
+            "Sampling Rate (Hz)": round(fs, 2),
+            "Recording Duration (s)": round(L / fs, 3),
+            "spacingInfo": {"numPixels": {"x": dims[0], "y": dims[1]}},
+        }
+
+        accept_list = [x == "accepted" for x in status_list]
+        N_acc = int(np.sum(accept_list))
+        N_rej = int(np.sum([x == "rejected" for x in status_list]))
+        if N_acc > 0:
+            idx_cells = np.where(accept_list)[0]
+        else:
+            idx_cells = np.where([x != "rejected" for x in status_list])[0]
+        cs_traces = [cs.get_cell_trace_data(x) for x in idx_cells]
+        avg_amp = round(float(np.mean(cs_traces)), 3)
+
+        metadata_cs_output_dict = metadata_isxd_outputs_dict.copy()
+        metadata_cs_output_dict.update(
+            {
+                "Number of Extracted ROIs": N,
+                "Number of Accepted ROIs": N_acc,
+                "Number of Rejected ROIs": N_rej,
+                "Average trace amplitude": avg_amp,
+            }
+        )
+        cs_output_name = f"{config.CS_REG_PREFIX}.{idx_sess:03g}.isxd"
+        cs_output_key = Path(cs_output_name).stem
+        metadata.update({cs_output_key: metadata_cs_output_dict})
+
+        if es_out_path is not None:
+            es = isx.EventSet.read(es_out_path)
+
+            # could use values obtained from cs above, but safer this way
+            # to ensure coherence between cs and es
+            L = es.timing.num_samples
+            fs = 1 / es.timing.period.secs_float
+            N = es.num_cells
+
+            avg_evt_rates = [
+                np.sum(es.get_cell_data(x)[1] > 1) / L * fs for x in idx_cells
+            ]
+
+            metadata_es_output_dict = metadata_isxd_outputs_dict.copy()
+            metadata_es_output_dict.update(
+                {
+                    "Number of cells": N,
+                    "Average event rate (Hz)": round(
+                        float(np.mean(avg_evt_rates)), 4
+                    ),
+                    "Minimum event rate (Hz)": round(
+                        float(np.min(avg_evt_rates)), 4
+                    ),
+                    "Maximum event rate (Hz)": round(
+                        float(np.max(avg_evt_rates)), 4
+                    ),
+                }
+            )
+            es_output_name = f"{config.ES_REG_PREFIX}.{idx_sess:03g}.isxd"
+            es_output_key = Path(es_output_name).stem
+            metadata.update({es_output_key: metadata_es_output_dict})
+
+    with open(os.path.join(output_dir, "output_metadata.json"), "w") as f:
         json.dump(metadata, f, indent=4)

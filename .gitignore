@@ -1,5 +1,6 @@
 # data
 outputs/
+data/IM13*
 inputs.sh
 inputs.json
 

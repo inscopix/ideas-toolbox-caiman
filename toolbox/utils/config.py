@@ -1,0 +1,5 @@
+MSR_OUTPUT_FNAME = "CaImAn_MSR_output.h5"
+ALIGN_METRICS_CSV_FNAME = "alignment_qc_metrics.csv"
+MSR_METRICS_CSV_FNAME = "CaImAn_MSR_metrics.csv"
+CS_REG_PREFIX = "cellset_registered"
+ES_REG_PREFIX = "eventset_registered"

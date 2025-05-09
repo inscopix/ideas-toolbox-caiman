@@ -1,0 +1,287 @@
+[
+    {
+        "key": "CaImAn_MSR_output",
+        "analysis_table_result_column_name": "CaImAn MSR Output",
+        "file_type": "caiman_data",
+        "file_format": "h5",
+        "file_structure": "unknown",
+        "file_category": "result",
+        "help": "Assignment matrix, aligned footprints and distance matrices outputted by CaImAn MSR",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "alignment_qc_metrics",
+        "analysis_table_result_column_name": "Alignment QC Metrics",
+        "file_type": "caiman_data",
+        "file_format": "csv",
+        "file_structure": "table",
+        "file_category": "result",
+        "help": "Table containing QC metrics for the alignment step of CaImAn MSR, such as pre- and post-alignment template image correlation, and average and maximum x/y shifts.",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "CaImAn_MSR_metrics",
+        "analysis_table_result_column_name": "CaImAn MSR Metrics",
+        "file_type": "caiman_data",
+        "file_format": "csv",
+        "file_structure": "table",
+        "file_category": "result",
+        "help": "Table containing centroid distance and footprint overlap metrics for all registered cells.",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "cellset_registered",
+        "analysis_table_result_column_name": "Registered Inscopix Cellsets",
+        "file_type": "cell_set",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Cellsets containing cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "eventset_registered",
+        "analysis_table_result_column_name": "Registered Inscopix Eventsets",
+        "file_type": "neural_events",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Eventsets containing neural event (e.g., trains of deconvolved spikes) from cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "eventset_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "preview_template_images_alignment",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Template images pre- and post-alignment",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "template_paths"
+        ],
+        "preview_of": [
+            "alignment_qc_metrics"
+        ]
+    },
+    {
+        "key": "preview_registered_cells_on_proj_images",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Registered cells on projection images",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_registered_cells_on_unified_image",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Registered cells on unified image",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_number_registered_cells_stacked_bars",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Number of registered cells across sessions",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_distance_overlap_histograms",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Histograms of centroid distance and overlap for registered and non-registered cells",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_metrics"
+        ]
+    },
+    {
+        "key": "preview_registered_traces",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Fluorescence traces from registered cells",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_registered_events",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Neural events from registered cells",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "eventset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_footprints_cellset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Footprints from output cellset",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": [
+            "cellset_registered"
+        ]
+    },
+    {
+        "key": "preview_traces_cellset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Fluorescence traces from output cellset",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": [
+            "cellset_registered"
+        ]
+    },
+    {
+        "key": "preview_eventset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Neural events from registered cells",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "eventset_paths"
+        ],
+        "preview_of": [
+            "eventset_registered"
+        ]
+    }
+]

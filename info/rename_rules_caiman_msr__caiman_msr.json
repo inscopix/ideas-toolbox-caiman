@@ -1,0 +1,109 @@
+{
+    "caiman_msr__caiman_msr": {
+        "CaImAn_MSR_output": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "CaImAn_MSR_output"
+        },
+        "alignment_qc_metrics": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "alignment_qc_metrics"
+        },
+        "CaImAn_MSR_metrics": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "CaImAn_MSR_metrics"
+        },
+        "cellset_registered": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "cellset_registered"
+        },
+        "eventset_registered": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "eventset_registered"
+        },
+        "preview_template_images_alignment": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_template_images_alignment"
+        },
+        "preview_registered_cells_on_proj_images": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_registered_cells_on_proj_images"
+        },
+        "preview_registered_cells_on_unified_image": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_registered_cells_on_unified_image"
+        },
+        "preview_number_registered_cells_stacked_bars": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_number_registered_cells_stacked_bars"
+        },
+        "preview_distance_overlap_histograms": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_distance_overlap_histograms"
+        },
+        "preview_registered_traces": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_registered_traces"
+        },
+        "preview_registered_events": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_registered_events"
+        },
+        "preview_footprints_cellset_registered": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_footprints_cellset_registered"
+        },
+        "preview_traces_cellset_registered": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_traces_cellset_registered"
+        },
+        "preview_eventset_registered": {
+            "pattern": [
+                "cellset_paths",
+                "custom_string"
+            ],
+            "custom_string": "preview_eventset_registered"
+        }
+    }
+}

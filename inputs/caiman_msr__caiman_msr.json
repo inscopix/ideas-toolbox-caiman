@@ -1,0 +1,29 @@
+{
+    "cellset_paths": [
+        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-cellset_raw.0.isxd",
+        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-cellset_raw.0.isxd"
+    ],
+    "template_paths": [
+        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-local_corr_img.tif",
+        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-local_corr_img.tif"
+    ],
+    "eventset_paths": [
+        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-neural_events.0.isxd",
+        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-neural_events.0.isxd"
+    ],
+    "align_flag": true,
+    "use_opt_flow": false,
+    "max_shifts": 80,
+    "max_thr": 0.0,
+    "max_dist": 20.0,
+    "thresh_cost": 0.8,
+    "enclosed_thr": 0.0,
+    "use_cell_status": "accepted",
+    "min_n_regist_sess": 2,
+    "fp_thr_method": "nrg",
+    "fp_thr": 0.9,
+    "cmap": "gray",
+    "show_grid": true,
+    "ticks_step": 100,
+    "n_sample_cells": 20
+}

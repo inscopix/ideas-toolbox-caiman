@@ -1,14 +1,27 @@
-import os
-import isx
-import math
-import cv2
-import numpy as np
-import imageio.v2 as iio
-from PIL import Image, ImageSequence
-import matplotlib.pyplot as plt
-from typing import List
+from beartype import beartype
+from beartype.typing import List, Optional, Tuple, Union
 import caiman as cm
+from caiman.utils import visualization
+import cv2
+from ideas.plots import (
+    save_neural_traces_preview,
+    save_footprints_preview,
+    EventSetPreview,
+)
+import imageio.v2 as iio
+import isx
+import logging
+import math
+from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from numpy import ndarray
+import numpy as np
+import os
+import pandas as pd
+from PIL import Image, ImageSequence
+from scipy.sparse import csc_matrix
+import seaborn as sns
+from toolbox.utils.metrics import process_xy_shifts, process_distance_matrices
 from toolbox.utils.plots import (
     save_neural_traces_preview,
     save_footprints_preview,
@@ -18,7 +31,8 @@ from toolbox.utils.utilities import (
     get_num_cells_by_status,
     get_file_size,
 )
-import logging
+
+# from typing import List
 
 logger = logging.getLogger()
 
@@ -878,3 +892,868 @@ def generate_local_correlation_image_preview(
         logger.warning(
             f"Correlation image preview could not be generated: {str(e)}"
         )
+
+
+@beartype
+def create_CaImAn_MSR_preview_figures(
+    *,
+    spatial_union: ndarray,
+    spatial: List[csc_matrix],
+    dims: Tuple[int, int],
+    templates: List[ndarray],
+    aligned_templates: List[ndarray],
+    xy_shifts: Union[List[List[Tuple[float, float]]], List[ndarray]],
+    assignments: ndarray,
+    df_assignments: pd.DataFrame,
+    D: List[List[ndarray]],
+    D_cm: List[List[ndarray]],
+    max_dist: Union[float, int],
+    cs_out_paths: List[str],
+    es_out_paths: List[Optional[str]],
+    fp_thr_method: str,
+    fp_thr: Union[float, int],
+    cmap_div: str,
+    cmap: str,
+    show_grid: bool,
+    ticks_step: int,
+    n_sample_cells: int,
+    output_dir: str,
+) -> None:
+    """
+    Create preview figures for all output files of CaImAn Multi-Session Registration.
+    """
+
+    # projection image parameters
+    vmin = 0
+    vmax = 99
+    fontsize = 4
+    alpha = 0.8
+
+    # Plot pre- and post-alignment template images
+    create_alignment_preview_figure(
+        dims=dims,
+        templates=templates,
+        aligned_templates=aligned_templates,
+        xy_shifts=xy_shifts,
+        cmap_div=cmap_div,
+        show_grid=show_grid,
+        ticks_step=ticks_step,
+        output_dir=output_dir,
+    )
+
+    # Plot registered cells in a unified figure
+    create_registered_cells_on_unified_image_preview_figure(
+        spatial_union=spatial_union,
+        dims=dims,
+        templates=templates,
+        assignments=assignments,
+        fp_thr_method=fp_thr_method,
+        fp_thr=fp_thr,
+        cmap=cmap,
+        show_grid=show_grid,
+        ticks_step=ticks_step,
+        fontsize=fontsize,
+        vmin=vmin,
+        vmax=vmax,
+        output_dir=output_dir,
+    )
+
+    # Plot registered cells on each session's template image
+    create_registered_cells_on_each_session_image_preview_figure(
+        spatial=spatial,
+        dims=dims,
+        templates=templates,
+        df_assignments=df_assignments,
+        fp_thr_method=fp_thr_method,
+        fp_thr=fp_thr,
+        cmap=cmap,
+        show_grid=show_grid,
+        ticks_step=ticks_step,
+        fontsize=fontsize,
+        alpha=alpha,
+        vmin=vmin,
+        vmax=vmax,
+        output_dir=output_dir,
+    )
+
+    # Plot stacked bars for yield per session
+    create_registered_yield_stacked_bars_preview_figure(
+        assignments=assignments,
+        output_dir=output_dir,
+    )
+
+    # Plot histograms of distance matrices
+    create_distance_matrices_histograms_preview_figure(
+        df_assignments=df_assignments,
+        D=D,
+        D_cm=D_cm,
+        max_dist=max_dist,
+        output_dir=output_dir,
+    )
+
+    # Plot sample traces from registered cells
+    create_sample_registered_traces_preview_figure(
+        df_assignments=df_assignments,
+        cs_out_paths=cs_out_paths,
+        n_sample_cells=n_sample_cells,
+        output_dir=output_dir,
+    )
+
+    # Plot rasters from registered eventsets
+    create_registered_eventsets_rasters_preview_figure(
+        es_out_paths=es_out_paths,
+        output_dir=output_dir,
+    )
+
+    # Plot IDEAS canonical preview figures for registered cellsets
+    for cs_path in cs_out_paths:
+        create_cellset_preview_figures(
+            cs_path=cs_path,
+            output_dir=output_dir,
+        )
+
+    # Plot IDEAS canonical preview figures for registered eventsets
+    if es_out_paths[0] is not None:
+        for es_path in es_out_paths:
+            create_eventset_preview_figures(
+                es_path=es_path,
+                output_dir=output_dir,
+            )
+
+
+@beartype
+def create_alignment_preview_figure(
+    *,
+    dims: Tuple[int, int],
+    templates: List[ndarray],
+    aligned_templates: List[ndarray],
+    xy_shifts: Union[List[List[Tuple[float, float]]], List[ndarray]],
+    cmap_div: str,
+    show_grid: bool,
+    ticks_step: int,
+    output_dir: str,
+) -> None:
+    """
+    Create a preview figure showing pre- and post-alignment template images,
+    as well as various alignment-related QC metrics.
+    """
+    n_sessions = len(templates)
+
+    figsize = (2 * dims[0] / 100, (n_sessions - 1) * dims[1] / 100)
+    fig, axes = plt.subplots(
+        n_sessions - 1,
+        2,
+        figsize=figsize,
+        sharex=True,
+        sharey=True,
+    )
+    for idx, (T1, T1a, shifts) in enumerate(
+        zip(templates, aligned_templates, xy_shifts)
+    ):
+        T2 = templates[idx + 1]
+        idx_ok = np.where(~np.isnan(T1a))
+        T2_ok = T2[idx_ok[0], idx_ok[1]]
+        T1a_ok = T1a[idx_ok[0], idx_ok[1]]
+        r_pre = np.corrcoef(T2.ravel(), T1.ravel())[0, 1]
+        r_post = np.corrcoef(T2_ok.ravel(), T1a_ok.ravel())[0, 1]
+        _, max_shifts = process_xy_shifts(shifts=shifts)
+
+        max_shifts_disp = tuple(round(x, 2) for x in max_shifts)
+        title_pre = (
+            f"sessions #{idx + 1} and #{idx + 2} template image difference\n"
+            f"pre-alignment Pearson's r = {r_pre:.03g}"
+        )
+        title_post = (
+            f"maximum x/y shifts (px) = {max_shifts_disp}\n"
+            f"post-alignment Pearson's r = {r_post:.03g}"
+        )
+
+        if len(axes.shape) == 2:
+            axes_1D = axes[idx, :].ravel()
+        else:
+            axes_1D = axes
+        for idx_col, (ax, T1_tmp, title_str) in enumerate(
+            zip(axes_1D, [T1, T1a], [title_pre, title_post])
+        ):
+            ax.imshow((T2 - T1_tmp).T, aspect="auto", cmap=cmap_div)
+            ax.set_title(title_str)
+            yend = dims[1]
+            if dims[1] % ticks_step == 0:
+                yend += ticks_step
+            xend = dims[0]
+            if dims[0] % ticks_step == 0:
+                xend += ticks_step
+            ax.set_yticks(
+                np.arange(-0.5, yend - 0.5, ticks_step),
+                labels=np.arange(0, yend, ticks_step),
+            )
+            ax.set_xticks(
+                np.arange(-0.5, xend - 0.5, ticks_step),
+                labels=np.arange(0, xend, ticks_step),
+            )
+            if show_grid:
+                ax.grid("xy", linestyle=":")
+            if idx == (axes.shape[0] - 1) and idx_col == 0:
+                ax.set_xlabel("x (px)")
+                ax.set_ylabel("y (px)")
+
+    fig.tight_layout()
+    preview_fname = "preview_template_images_alignment.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_registered_cells_on_unified_image_preview_figure(
+    *,
+    spatial_union: ndarray,
+    dims: Tuple[int, int],
+    templates: List[ndarray],
+    assignments: ndarray,
+    fp_thr_method: str,
+    fp_thr: Union[float, int],
+    cmap: str,
+    show_grid: bool,
+    ticks_step: int,
+    fontsize: int,
+    vmin: Union[float, int],
+    vmax: Union[float, int],
+    output_dir: str,
+) -> None:
+    """
+    Show all cells as a unified figure on a common template image, with
+    contour color representing number of sessions across which cells were
+    registered.
+    """
+    registered_counts = np.sum(~np.isnan(assignments), axis=1)
+    max_count = np.max(registered_counts)
+
+    if max_count <= 10:
+        colors = np.vstack(
+            [plt.cm.tab10(7), plt.cm.tab10(np.setdiff1d(range(10), 7))]
+        )[:max_count, :]
+    else:
+        colors = plt.cm.turbo(np.linspace(0, 1, max_count))
+    colors_dict = dict(
+        zip(
+            range(1, max_count + 1),
+            colors,
+        )
+    )
+
+    template = templates[-1]
+    figsize = [x / 50 for x in dims]
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    ax.imshow(
+        template.T,
+        vmin=np.percentile(template, vmin),
+        vmax=np.percentile(template, vmax),
+        cmap=cmap,
+    )
+    for registered_count in np.sort(np.unique(registered_counts)):
+        idx_cells = np.where(registered_counts == registered_count)[0]
+        if len(idx_cells) == 0:
+            continue
+        for idx, idx_cell in enumerate(idx_cells):
+            c = visualization.get_contours(
+                csc_matrix(spatial_union[:, idx_cell]).T,
+                template.T.shape,
+                fp_thr,
+                fp_thr_method,
+                swap_dim=True,
+            )[0]
+            v = c["coordinates"]
+            if len(v.shape) < 2:
+                continue
+            c["bbox"] = [
+                np.floor(np.nanmin(v[:, 1])),
+                np.ceil(np.nanmax(v[:, 1])),
+                np.floor(np.nanmin(v[:, 0])),
+                np.ceil(np.nanmax(v[:, 0])),
+            ]
+            if registered_count == 1:
+                if idx == 0:
+                    label = f"{len(idx_cells)} not registered"
+                else:
+                    label = None
+                ax.plot(
+                    *v.T,
+                    lw=1,
+                    color=colors_dict[registered_count],
+                    label=label,
+                )
+            else:
+                if idx == 0:
+                    label = (
+                        f"{len(idx_cells)} registered across "
+                        f"{registered_count} sessions"
+                    )
+                else:
+                    label = None
+                ax.plot(
+                    *v.T,
+                    lw=2,
+                    color=colors_dict[registered_count],
+                    label=label,
+                )
+                ax.text(
+                    np.mean(c["bbox"][2:]),
+                    np.mean(c["bbox"][:2]),
+                    idx_cell,
+                    color=colors_dict[registered_count],
+                    fontsize=fontsize * 2,
+                    fontweight="bold",
+                    va="center",
+                    ha="center",
+                )
+    ax.legend()
+    yend = dims[1]
+    if dims[1] % ticks_step == 0:
+        yend += ticks_step
+    xend = dims[0]
+    if dims[0] % ticks_step == 0:
+        xend += ticks_step
+    ax.set_yticks(
+        np.arange(-0.5, yend - 0.5, ticks_step),
+        labels=np.arange(0, yend, ticks_step),
+    )
+    ax.set_xticks(
+        np.arange(-0.5, xend - 0.5, ticks_step),
+        labels=np.arange(0, xend, ticks_step),
+    )
+    if show_grid:
+        ax.grid("xy", linestyle=":")
+    ax.set_xlabel("x (px)")
+    ax.set_ylabel("y (px)")
+    fig.tight_layout()
+    preview_fname = "preview_registered_cells_on_unified_image.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_registered_cells_on_each_session_image_preview_figure(
+    *,
+    spatial: List[csc_matrix],
+    dims: Tuple[int, int],
+    templates: List[ndarray],
+    df_assignments: pd.DataFrame,
+    fp_thr_method: str,
+    fp_thr: Union[float, int],
+    cmap: str,
+    show_grid: bool,
+    ticks_step: int,
+    fontsize: int,
+    alpha: float,
+    vmin: Union[float, int],
+    vmax: Union[float, int],
+    output_dir: str,
+) -> None:
+    """
+    Show registered cells on each session's template image.
+    """
+    palette = plt.cm.tab10(np.setdiff1d(range(10), 7))  # remove gray
+    n_sessions = len(spatial)
+
+    # adapt subplot titles based on whether df_assignments contains cells that
+    # were not registered across sessions
+    if np.any(df_assignments.isna()):
+        title_suffix = ""
+    else:
+        title_suffix = " registered"
+
+    n_cols = np.ceil(np.sqrt(n_sessions)).astype(int)
+    n_rows = np.ceil(n_sessions / n_cols).astype(int)
+    figsize = [x / 100 * y for x, y in zip(dims, (n_cols, n_rows))]
+    fig, axes = plt.subplots(
+        n_rows,
+        n_cols,
+        figsize=figsize,
+        sharex=True,
+        sharey=True,
+    )
+    for idx_session, (ax, template) in enumerate(zip(axes.ravel(), templates)):
+        ax.imshow(
+            template.T,
+            vmin=np.percentile(template, vmin),
+            vmax=np.percentile(template, vmax),
+            cmap=cmap,
+        )
+        for idx_cell in range(spatial[idx_session].shape[1]):
+            c = visualization.get_contours(
+                spatial[idx_session][:, idx_cell],
+                template.T.shape,
+                fp_thr,
+                fp_thr_method,
+                swap_dim=True,
+            )[0]
+            v = c["coordinates"]
+            if len(v.shape) < 2:
+                continue
+            c["bbox"] = [
+                np.floor(np.nanmin(v[:, 1])),
+                np.ceil(np.nanmax(v[:, 1])),
+                np.floor(np.nanmin(v[:, 0])),
+                np.ceil(np.nanmax(v[:, 0])),
+            ]
+            ax.plot(*v.T, lw=1, color="gray")
+        idx_color = 0
+        for idx_cell in (
+            df_assignments.loc[:, idx_session].dropna().astype(int)
+        ):
+            c = visualization.get_contours(
+                spatial[idx_session][:, idx_cell],
+                template.T.shape,
+                fp_thr,
+                fp_thr_method,
+                swap_dim=True,
+            )[0]
+            v = c["coordinates"]
+            c["bbox"] = [
+                np.floor(np.nanmin(v[:, 1])),
+                np.ceil(np.nanmax(v[:, 1])),
+                np.floor(np.nanmin(v[:, 0])),
+                np.ceil(np.nanmax(v[:, 0])),
+            ]
+            color = palette[idx_color % palette.shape[0], :]
+            ax.plot(*v.T, lw=2, alpha=alpha, color=color)
+            ax.text(
+                np.mean(c["bbox"][2:]),
+                np.mean(c["bbox"][:2]),
+                idx_cell,
+                color=color,
+                fontsize=fontsize,
+                fontweight="bold",
+                va="center",
+                ha="center",
+            )
+            idx_color += 1
+        ax.set_title(
+            f"session #{idx_session + 1} - {idx_color}{title_suffix} cells"
+        )
+        yend = dims[1]
+        if dims[1] % ticks_step == 0:
+            yend += ticks_step
+        xend = dims[0]
+        if dims[0] % ticks_step == 0:
+            xend += ticks_step
+        ax.set_yticks(
+            np.arange(-0.5, yend - 0.5, ticks_step),
+            labels=np.arange(0, yend, ticks_step),
+        )
+        ax.set_xticks(
+            np.arange(-0.5, xend - 0.5, ticks_step),
+            labels=np.arange(0, xend, ticks_step),
+        )
+        if show_grid:
+            ax.grid("xy", linestyle=":")
+        if idx_session == (n_rows - 1) * n_cols:
+            ax.set_xlabel("x (px)")
+            ax.set_ylabel("y (px)")
+    n_extra_axes = n_rows * n_cols - n_sessions
+    if n_extra_axes > 0:
+        for ax in axes.ravel()[-n_extra_axes:]:
+            ax.remove()
+    fig.tight_layout()
+    preview_fname = "preview_registered_cells_on_proj_images.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_registered_yield_stacked_bars_preview_figure(
+    *,
+    assignments: ndarray,
+    output_dir: str,
+) -> None:
+    """
+    Plot stacked bars for yield per session.
+    """
+    n_sessions = assignments.shape[1]
+    df = pd.DataFrame(columns=["session", *range(n_sessions, 0, -1)])
+    df.loc[:, "session"] = range(1, n_sessions + 1)
+    for idx in range(n_sessions):
+        assignments_tmp = assignments[~np.isnan(assignments[:, idx]), :]
+        registered_counts = np.sum(~np.isnan(assignments_tmp), axis=1)
+        n_reg_sessions, counts = np.unique(
+            registered_counts, return_counts=True
+        )
+        for n_reg_sess, count in zip(n_reg_sessions, counts):
+            df.loc[idx, n_reg_sess] = count
+
+    if n_sessions <= 10:
+        colors = np.vstack(
+            [plt.cm.tab10(7), plt.cm.tab10(np.setdiff1d(range(10), 7))]
+        )[:n_sessions, :]
+    else:
+        colors = plt.cm.turbo(np.linspace(0, 1, n_sessions))
+    colors_dict = dict(
+        zip(
+            range(1, n_sessions + 1),
+            colors,
+        )
+    )
+
+    labels = [f"{x} session" for x in range(n_sessions, 0, -1)]
+    labels = [
+        labels[x] + "s" if int(labels[x].split(" ")[0]) > 1 else labels[x]
+        for x in range(n_sessions)
+    ]
+
+    fig, ax = plt.subplots(1, 1, figsize=(n_sessions * 2.5, 4))
+    df.plot(ax=ax, x="session", kind="bar", stacked=True, color=colors_dict)
+    ax.set_xticklabels(labels=range(1, n_sessions + 1), rotation=0)
+    ax.set_ylabel("number of cells")
+    ax.legend(
+        title="registered across",
+        labels=labels,
+        bbox_to_anchor=(1.0, 0.5),
+        loc="center left",
+    )
+    ax.spines[["right", "top"]].set_visible(False)
+    fig.tight_layout()
+    preview_fname = "preview_number_registered_cells_stacked_bars.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_distance_matrices_histograms_preview_figure(
+    *,
+    df_assignments: pd.DataFrame,
+    D: List[List[ndarray]],
+    D_cm: List[List[ndarray]],
+    max_dist: Union[float, int],
+    output_dir: str,
+) -> None:
+    """
+    Plot histograms of the footprint centroid and overlap distance matrices.
+    """
+    d_reg, d_cm_reg, d_nonreg, d_cm_nonreg = process_distance_matrices(
+        df_assignments=df_assignments,
+        D=D,
+        D_cm=D_cm,
+    )
+
+    df_1 = pd.DataFrame(
+        np.vstack(
+            (
+                np.concatenate((d_cm_reg, d_cm_nonreg)),
+                np.array(
+                    ["registered"] * len(d_cm_reg)
+                    + ["non-registered"] * len(d_cm_nonreg)
+                ),
+            )
+        ).T,
+        columns=["centroid distance", "status"],
+    )
+    df_1["centroid distance"] = df_1["centroid distance"].astype(float)
+
+    df_2 = pd.DataFrame(
+        np.vstack(
+            (
+                np.concatenate((d_reg, d_nonreg)),
+                np.array(
+                    ["registered"] * len(d_reg)
+                    + ["non-registered"] * len(d_nonreg)
+                ),
+            )
+        ).T,
+        columns=["overlap", "status"],
+    )
+    df_2["overlap"] = df_2["overlap"].astype(float)
+
+    xs = ["centroid distance", "overlap"]
+    xlabels = ["centroid distance (px)", "overlap (Jaccard Index)"]
+    xlims = [(0, max_dist * 4), (0, 1)]
+
+    fig, axes = plt.subplots(2, 1, figsize=(6, 6))
+    for ax, df, x, xlim, xlabel in zip(axes, [df_1, df_2], xs, xlims, xlabels):
+        binwidth = np.abs(np.diff(xlim)[0]) / 20
+        sns.histplot(
+            df,
+            x=x,
+            hue="status",
+            ax=ax,
+            binwidth=binwidth,
+            binrange=xlim,
+            linewidth=1,
+            kde=True,
+        )
+        ax.spines[["right", "top"]].set_visible(False)
+        ax.set_xlim(xlim)
+        ax.set_xlabel(xlabel)
+    fig.tight_layout()
+    preview_fname = "preview_distance_overlap_histograms.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_sample_registered_traces_preview_figure(
+    *,
+    df_assignments: pd.DataFrame,
+    cs_out_paths: List[str],
+    n_sample_cells: int,
+    output_dir: str,
+) -> None:
+    """
+    Plot sample traces from registered cells.
+    """
+    n_sessions = len(cs_out_paths)
+
+    df_assignments_all = df_assignments.query(
+        "n_reg_sess == @n_sessions"
+    ).reset_index(drop=True)
+    n_reg_cells_all = len(df_assignments_all)
+
+    L_list = []
+    for cs_path in cs_out_paths:
+        cs = isx.CellSet.read(cs_path)
+        L_list.append(cs.timing.num_samples)
+    fs = 1 / cs.timing.period.secs_float
+    if (L_list[-1] - 1) / fs > 120:
+        time_in_min = True
+        time_str = "min"
+    else:
+        time_in_min = False
+        time_str = "s"
+
+    ystep = 1
+
+    if n_sample_cells > n_reg_cells_all:
+        logger.warning(
+            f"Asked for {n_sample_cells} sample cells to be displayed, but "
+            f"only {n_reg_cells_all} are available in the registered Inscopix"
+            f" cellsets. Will thus only show {n_reg_cells_all} in the "
+            "registered traces preview figure."
+        )
+        n_sample_cells = n_reg_cells_all
+
+    idx_cells = np.sort(
+        np.random.choice(
+            np.arange(n_reg_cells_all), n_sample_cells, replace=False
+        )
+    )
+
+    range_mat = np.zeros((n_reg_cells_all, n_sessions))
+    for idx_sess in range(n_sessions):
+        cs = isx.CellSet.read(cs_out_paths[idx_sess])
+        for offset, idx in enumerate(idx_cells):
+            y = cs.get_cell_trace_data(idx)
+            range_mat[offset, idx_sess] = np.max(y) - np.min(y)
+
+    fig, axes = plt.subplots(
+        1,
+        n_sessions,
+        figsize=(n_sessions * 4, 8),
+        sharey=True,
+        width_ratios=L_list,
+    )
+    for idx_sess in range(n_sessions):
+        ax = axes[idx_sess]
+        cs = isx.CellSet.read(cs_out_paths[idx_sess])
+        L = cs.timing.num_samples
+        fs = 1 / cs.timing.period.secs_float
+        tb_tmp = np.linspace(0, (L - 1) / fs, L)
+        if time_in_min:
+            tb_tmp /= 60
+        for offset, idx in enumerate(idx_cells):
+            y = cs.get_cell_trace_data(idx)
+            y -= np.min(y)
+            y /= np.max(range_mat[offset, :])
+            ax.plot(tb_tmp, y * 0.9 + offset)
+        ax.set_ylim((-0.5, len(idx_cells) + 0.5))
+        ax.set_xlim((tb_tmp[0], tb_tmp[-1]))
+        ax.spines[["right", "top"]].set_visible(False)
+        ax.set_title(f"session #{idx_sess + 1}")
+        ax.set_yticks(np.arange(0, len(idx_cells), ystep), labels=idx_cells)
+        if idx_sess == 0:
+            ax.set_xlabel(f"time ({time_str})")
+            ax.set_ylabel("cell index")
+    fig.tight_layout()
+    preview_fname = "preview_registered_traces.svg"
+    plt.savefig(
+        os.path.join(output_dir, preview_fname),
+        bbox_inches="tight",
+        pad_inches=0.1,
+    )
+    logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_registered_eventsets_rasters_preview_figure(
+    *,
+    es_out_paths: List[Optional[str]],
+    output_dir: str,
+) -> None:
+    """
+    Plot rasters from registered eventsets.
+    """
+    if es_out_paths[0] is not None:
+        n_xticks = 5  # in minutes
+        possible_xsteps = [0.5, 1, 2, 5, 10]
+        vmin_perc = 0
+        vmax_perc = 99
+
+        n_sessions = len(es_out_paths)
+
+        L_list = []
+        n_reg_list = []
+        for es_path in es_out_paths:
+            es = isx.EventSet.read(es_path)
+            L_list.append(es.timing.num_samples)
+            n_reg_list.append(es.num_cells)
+        fs = 1 / es.timing.period.secs_float
+
+        idx_xstep = np.argmin(
+            np.abs((np.min(L_list) / fs / 60) / n_xticks - possible_xsteps)
+        )
+        xstep = possible_xsteps[idx_xstep]
+        if (L_list[-1] - 1) / fs > 120:
+            time_in_min = True
+            time_str = "min"
+        else:
+            time_in_min = False
+            time_str = "s"
+
+        fig, axes = plt.subplots(
+            1,
+            n_sessions,
+            figsize=(
+                n_sessions * 4,
+                np.max((5 * np.max(n_reg_list) / 100, 4)),
+            ),
+            sharey=True,
+            width_ratios=L_list,
+        )
+        for idx_sess, n_reg_cells in enumerate(n_reg_list):
+            ax = axes[idx_sess]
+            es = isx.EventSet.read(es_out_paths[idx_sess])
+            L = es.timing.num_samples
+            fs = 1 / es.timing.period.secs_float
+            tb_tmp = np.linspace(0, (L - 1) / fs, L)
+            if time_in_min:
+                tb_tmp = tb_tmp / 60
+            event_mat = np.zeros((n_reg_cells, L))
+            for idx in range(n_reg_cells):
+                offsets, amplitudes = es.get_cell_data(idx)
+                if time_in_min:
+                    offsets_idx = np.argmin(
+                        np.abs(tb_tmp - (offsets / 1e6 / 60).reshape(-1, 1)),
+                        axis=1,
+                    )
+                else:
+                    offsets_idx = np.argmin(
+                        np.abs(tb_tmp - (offsets / 1e6).reshape(-1, 1)), axis=1
+                    )
+                event_mat[idx, offsets_idx] = amplitudes
+            if idx_sess == 0:
+                vmin = np.percentile(event_mat, vmin_perc)
+                vmax = np.percentile(event_mat, vmax_perc)
+                while vmax == vmin and vmax_perc <= 100:
+                    vmax_perc += 0.1
+                    vmax = np.percentile(event_mat, vmax_perc)
+            ax.imshow(
+                event_mat,
+                aspect="auto",
+                origin="lower",
+                interpolation="none",
+                cmap="Greys",
+                vmin=vmin,
+                vmax=vmax,
+            )
+            xticklabels = np.arange(tb_tmp[0], tb_tmp[-1], xstep, dtype=int)
+            if time_in_min:
+                xticks = np.array(xticklabels * 60 * fs, dtype=int)
+            else:
+                xticks = np.array(xticklabels * fs, dtype=int)
+            ax.set_xticks(xticks, labels=xticklabels)
+            ax.spines[["right", "top"]].set_visible(False)
+            ax.set_title(f"session #{idx_sess + 1}")
+            if idx_sess == 0:
+                ax.set_xlabel(f"time ({time_str})")
+                ax.set_ylabel("cell index")
+        fig.tight_layout()
+        preview_fname = "preview_registered_events.svg"
+        plt.savefig(
+            os.path.join(output_dir, preview_fname),
+            bbox_inches="tight",
+            pad_inches=0.1,
+        )
+        logger.info(f"Saved preview figure {preview_fname}")
+
+
+@beartype
+def create_cellset_preview_figures(
+    *,
+    cs_path: str,
+    output_dir: str,
+) -> None:
+    """
+    [copied from ideas-toolbox-idl-neural-processing's
+    generate_cell_set_previews() in utils/preview_utils.py, with a few
+    changes] Generate standard IDEAS traces and footprints previews for a
+    single cell set file.
+    """
+    cs_basename = os.path.splitext(os.path.basename(cs_path))[0]
+
+    # preview footprints
+    preview_fname = f"preview_footprints_{cs_basename}.svg"
+    preview_footprints_path = os.path.join(output_dir, preview_fname)
+    save_footprints_preview(
+        cell_set_file=cs_path,
+        output_preview_filename=preview_footprints_path,
+    )
+
+    # preview traces
+    preview_fname = f"preview_traces_{cs_basename}.svg"
+    preview_traces_path = os.path.join(output_dir, preview_fname)
+    save_neural_traces_preview(
+        cell_set_file=cs_path,
+        output_preview_filename=preview_traces_path,
+    )
+
+
+@beartype
+def create_eventset_preview_figures(
+    *,
+    es_path: str,
+    output_dir: str,
+) -> None:
+    """
+    [copied from ideas-toolbox-idl-neural-processing's
+    generate_event_set_preview() in utils/preview_utils.py, with a few
+    improvements] Generate standard IDEAS previews for a single event set
+    file.
+    """
+    es_basename = os.path.splitext(os.path.basename(es_path))[0]
+
+    # preview neural events
+    preview_fname = f"preview_{es_basename}.svg"
+    preview_events_path = os.path.join(output_dir, preview_fname)
+    es_preview_obj = EventSetPreview(
+        input_eventset_filepath=es_path,
+        output_svg_filepath=preview_events_path,
+    )
+    es_preview_obj.generate_preview()
