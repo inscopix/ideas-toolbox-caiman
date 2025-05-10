@@ -1047,6 +1047,7 @@ def create_alignment_preview_figure(
         sharex=True,
         sharey=True,
     )
+    # below, T stands for template
     for idx, (T1, T1a, shifts) in enumerate(
         zip(templates, aligned_templates, xy_shifts)
     ):
@@ -1159,6 +1160,7 @@ def create_registered_cells_on_unified_image_preview_figure(
         if len(idx_cells) == 0:
             continue
         for idx, idx_cell in enumerate(idx_cells):
+            # c refers to the cell contours dictionary
             c = visualization.get_contours(
                 csc_matrix(spatial_union[:, idx_cell]).T,
                 template.T.shape,
@@ -1309,6 +1311,7 @@ def create_registered_cells_on_each_session_image_preview_figure(
         for idx_cell in (
             df_assignments.loc[:, idx_session].dropna().astype(int)
         ):
+            # c refers to the cell contours dictionary
             c = visualization.get_contours(
                 spatial[idx_session][:, idx_cell],
                 template.T.shape,
@@ -1445,6 +1448,8 @@ def create_distance_matrices_histograms_preview_figure(
     """
     Plot histograms of the footprint centroid and overlap distance matrices.
     """
+    # D and D_cm refer to the list of cost (1 - Jaccard Index) and Euclidean
+    # distance matrices, respectively, as defined in CaImAn
     d_reg, d_cm_reg, d_nonreg, d_cm_nonreg = process_distance_matrices(
         df_assignments=df_assignments,
         D=D,
@@ -1527,8 +1532,11 @@ def create_sample_registered_traces_preview_figure(
     ).reset_index(drop=True)
     n_reg_cells_all = len(df_assignments_all)
 
+    # L and fs refer to cellset length (or duration, in samples) and
+    # sampling rate (in Hz), respectively
     L_list = []
     for cs_path in cs_out_paths:
+        # cs refers to the CellSet object
         cs = isx.CellSet.read(cs_path)
         L_list.append(cs.timing.num_samples)
     fs = 1 / cs.timing.period.secs_float

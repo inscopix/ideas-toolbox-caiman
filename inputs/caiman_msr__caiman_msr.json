@@ -1,15 +1,15 @@
 {
     "cellset_paths": [
-        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-cellset_raw.0.isxd",
-        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-cellset_raw.0.isxd"
+        "/ideas/data/sample_cellset_msr_1.isxd",
+        "/ideas/data/sample_cellset_msr_2.isxd"
     ],
     "template_paths": [
-        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-local_corr_img.tif",
-        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-local_corr_img.tif"
+        "/ideas/data/sample_template_image_msr_1.tif",
+        "/ideas/data/sample_template_image_msr_2.tif"
     ],
     "eventset_paths": [
-        "/ideas/data/IM13_baseline_2024-08-26-10-08-39_video-neural_events.0.isxd",
-        "/ideas/data/IM13_baseline_2024-08-29-08-22-30_video-neural_events.0.isxd"
+        "/ideas/data/sample_eventset_msr_1.isxd",
+        "/ideas/data/sample_eventset_msr_2.isxd"
     ],
     "align_flag": true,
     "use_opt_flow": false,

@@ -706,6 +706,8 @@ def create_msr_output_metadata(
         D=D,
         D_cm=D_cm,
     )
+    # D and D_cm refer to the list of cost (1 - Jaccard Index) and Euclidean
+    # distance matrices, respectively, as defined in CaImAn
 
     metadata_msr_output_dict = {
         "n_sessions": n_sessions,
@@ -758,6 +760,10 @@ def create_msr_output_metadata(
     for idx_sess, (cs_out_path, es_out_path) in enumerate(
         zip(cs_out_paths, es_out_paths)
     ):
+        # cs refers to the CellSet object
+        # L refers to cellset length (or duration, in samples)
+        # fs refers to sampling rate (in Hz)
+        # N refers to number of cells
         cs = isx.CellSet.read(cs_out_path)
         L = cs.timing.num_samples
         fs = 1 / cs.timing.period.secs_float
@@ -797,6 +803,7 @@ def create_msr_output_metadata(
         metadata.update({cs_output_key: metadata_cs_output_dict})
 
         if es_out_path is not None:
+            # es refers to the EventSet object
             es = isx.EventSet.read(es_out_path)
 
             # could use values obtained from cs above, but safer this way

@@ -26,6 +26,7 @@ def compute_alignment_metrics(
     mean_shifts_list = []
     max_shifts_list = []
     for idx in range(len(templates) - 1):
+        # below, T stands for template
         T2 = templates[idx + 1]
         T1 = templates[idx]
 
@@ -101,6 +102,8 @@ def process_distance_matrices(
     """
     Isolate distance matrix values for registered and non-registered cells.
     """
+    # D and D_cm refer to the list of cost (1 - Jaccard Index) and Euclidean
+    # distance matrices, respectively, as defined in CaImAn
     D_nonreg = deepcopy(D)
     D_cm_nonreg = deepcopy(D_cm)
 
@@ -142,6 +145,8 @@ def compute_distance_matrix_metrics(
     Get mean overlap and mean centroid distance for all registered cells
     (matches) and all non-matches across all available pairs of sessions.
     """
+    # D and D_cm refer to the list of cost (1 - Jaccard Index) and Euclidean
+    # distance matrices, respectively, as defined in CaImAn
     d_match, d_cm_match, d_nonmatch, d_cm_nonmatch = process_distance_matrices(
         df_assignments=df_assignments,
         D=D,

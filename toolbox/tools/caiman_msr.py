@@ -56,13 +56,13 @@ def caiman_msr(
     :param n_sample_cells: Number of sample cells to be plotted in the registered traces preview figure. [int]
     :param output_dir: [for testing purpose only] Directory where output files should be saved. [str]
     """
-    logger.info("[ Start CaImAn Multi-Session Registration ]")
+    logger.info("Starting CaImAn Multi-Session Registration")
 
     if not output_dir:
         output_dir = os.getcwd()
 
     # validate inputs
-    logger.info("[ Validate input files and parameters ]")
+    logger.info("Validating input files and parameters")
     eventset_paths, enclosed_thr, min_n_regist_sess = (
         utilities.validate_caiman_msr_inputs(
             cellset_paths=cellset_paths,
@@ -94,13 +94,13 @@ def caiman_msr(
         )
 
     # load footprints from cellsets and template images
-    logger.info("[ Load footprints and template images ]")
+    logger.info("Loading footprints and template images")
     spatial = []
     cell_names_list = []
     templates = []
-    for cs, temp in zip(cellset_paths, template_paths):
+    for cellset_path, temp in zip(cellset_paths, template_paths):
         footprints_mat, cell_names = io.get_footprints_from_cellset(
-            cellset_path=cs,
+            cellset_path=cellset_path,
             use_cell_status=use_cell_status,
         )
         spatial.append(footprints_mat)
@@ -117,7 +117,7 @@ def caiman_msr(
     )
 
     # run CaImAn MSR
-    logger.info("[ Run CaImAn alignment and registration algorithm ]")
+    logger.info("Running CaImAn alignment and registration algorithm")
     (
         spatial_union,
         assignments,
@@ -139,9 +139,12 @@ def caiman_msr(
         thresh_cost=thresh_cost,
         enclosed_thr=enclosed_thr,
     )
+    # D and D_cm, outputted by the function above and used as inputs in
+    # several functions below, refer to the list of cost (1 - Jaccard Index)
+    # and Euclidean distance matrices, respectively, as defined in CaImAn
 
     # save MSR outputs
-    logger.info("[ Save CaImAn MSR outputs ]")
+    logger.info("Saving CaImAn MSR outputs")
     io.save_msr_output(
         spatial_union=spatial_union,
         assignments=assignments,
@@ -151,7 +154,7 @@ def caiman_msr(
     )
 
     # transform and filter assignments matrix into a pandas DataFrame
-    logger.info("[ Transform assignments matrix ]")
+    logger.info("Transforming assignments matrix")
     df_assignments, n_reg_cells_all = utilities.transform_assignments_matrix(
         assignments=assignments,
         min_n_regist_sess=min_n_regist_sess,
@@ -163,7 +166,7 @@ def caiman_msr(
     )
 
     # save registered cellsets and eventsets
-    logger.info("[ Save registered cellsets and optional eventsets ]")
+    logger.info("Saving registered cellsets and optional eventsets")
     cs_out_paths, es_out_paths = io.save_registered_cellsets_eventsets(
         cellset_paths=cellset_paths,
         eventset_paths=eventset_paths,
@@ -172,7 +175,7 @@ def caiman_msr(
     )
 
     # save output csv containing alignment metrics
-    logger.info("[ Save alignment metrics ]")
+    logger.info("Saving alignment metrics")
     io.save_alignment_metrics_csv(
         templates=templates,
         aligned_templates=aligned_templates,
@@ -181,7 +184,7 @@ def caiman_msr(
     )
 
     # save output csv containing MSR metrics for all matches
-    logger.info("[ Save registration metrics ]")
+    logger.info("Saving registration metrics")
     io.save_msr_metrics_csv(
         df_assignments=df_assignments,
         D=D,
@@ -190,7 +193,7 @@ def caiman_msr(
     )
 
     # create metadata
-    logger.info("[ Generate output metadata ]")
+    logger.info("Generating output metadata")
     metadata.create_msr_output_metadata(
         spatial=spatial,
         dims=dims,
@@ -207,7 +210,7 @@ def caiman_msr(
     )
 
     # create preview figures
-    logger.info("[ Generate preview figures ]")
+    logger.info("Generating preview figures")
     previews.create_CaImAn_MSR_preview_figures(
         spatial_union=spatial_union,
         spatial=spatial,
@@ -232,6 +235,4 @@ def caiman_msr(
         output_dir=output_dir,
     )
 
-    logger.info(
-        "[ CaImAn Multi-Session Registration successfully completed! ]"
-    )
+    logger.info("CaImAn Multi-Session Registration successfully completed!")

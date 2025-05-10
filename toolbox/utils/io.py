@@ -72,8 +72,10 @@ def get_footprints_from_cellset(
         cell_names = [f"C{idx:0{n_digits}g}" for idx in idx_ok]
 
     elif ext == ".isxd":
+        # cs refers to the CellSet object
         cs = isx.CellSet.read(cellset_path)
 
+        # A refers to the matrix of cell footprints, as defined in CaImAn
         A = []
         cell_names = []
         for idx in range(cs.num_cells):
@@ -188,6 +190,8 @@ def save_registered_cellsets_eventsets(
 
         ext = os.path.splitext(cs_path)[1]
         if ext in [".h5", ".hdf5"]:
+            # below, A and S refer to matrices of cell footprints and
+            # deconvolved spikes, as defined in CaImAn
             model = load_CNMF(cs_path)
             dims = model.dims
             A = model.estimates.A.toarray()
@@ -211,6 +215,8 @@ def save_registered_cellsets_eventsets(
                 for x in df_assign_sub[f"name_in_{idx_session}"].tolist()
             ]
 
+            # L and fs refer to cellset length (or duration, in samples) and
+            # sampling rate (in Hz), respectively
             L = rawC.shape[1]
             fs = model.params.data["fr"]
             period_s = 1 / fs
@@ -245,6 +251,7 @@ def save_registered_cellsets_eventsets(
                 timing=timing,
                 cell_names=df_assign_sub["name"].tolist(),
             )
+            # tb refers to time base, the vector representing time in seconds
             tb = np.linspace(0, (L - 1) / fs, L)
             for idx_out, idx_cell in enumerate(idx_cells):
                 events = S[idx_cell, :]
@@ -257,6 +264,7 @@ def save_registered_cellsets_eventsets(
             es_out.flush()
 
         elif ext == ".isxd":
+            # cs refers to the CellSet object
             cs = isx.CellSet.read(file_path=cs_path)
             all_cell_names = [cs.get_cell_name(x) for x in range(cs.num_cells)]
             reg_cell_names = df_assign_sub["name"].tolist()
@@ -281,6 +289,7 @@ def save_registered_cellsets_eventsets(
                 cs_out.set_cell_status(index=idx_out, status=status)
 
             if es_path is not None:
+                # es refers to the EventSet object
                 es = isx.EventSet.read(file_path=es_path)
                 es_out = isx.EventSet.write(
                     file_path=es_out_path,
@@ -340,6 +349,7 @@ def save_alignment_metrics_csv(
     ]
     df_align_metrics = pd.DataFrame(columns=columns)
 
+    # below, T stands for template
     for idx, (T1, T1a, shifts) in enumerate(
         zip(templates, aligned_templates, xy_shifts)
     ):
@@ -366,7 +376,7 @@ def save_alignment_metrics_csv(
         path_or_buf=align_metrics_csv_path,
         sep=",",
         header=True,
-        index=True,
+        index=False,
     )
 
     logger.info(f"Saved {config.ALIGN_METRICS_CSV_FNAME}")
@@ -401,6 +411,8 @@ def save_msr_metrics_csv(
     ]
     df_msr_metrics = pd.DataFrame(columns=columns)
 
+    # D and D_cm refer to the list of cost (1 - Jaccard Index) and Euclidean
+    # distance matrices, respectively, as defined in CaImAn
     for idx in range(len(D)):
         df_assign_sub = (
             df_assignments.loc[
@@ -430,7 +442,7 @@ def save_msr_metrics_csv(
         path_or_buf=msr_metrics_csv_path,
         sep=",",
         header=True,
-        index=True,
+        index=False,
     )
 
     logger.info(f"Saved {config.MSR_METRICS_CSV_FNAME}")
