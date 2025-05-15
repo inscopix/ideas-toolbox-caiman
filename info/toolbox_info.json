@@ -2690,6 +2690,501 @@
                     ]
                 }
             ]
+        },
+        {
+            "name": "CaImAn Multi-Session Registration",
+            "key": "caiman_msr__caiman_msr",
+            "help": "Perform CaImAn Multi-Session Registration (MSR) on a set of cellsets and related template images.",
+            "version": "0.4.0",
+            "maturity": "development",
+            "visibility": "private",
+            "toolkit": "Calcium Imaging Processing",
+            "command": "caiman_msr__caiman_msr.sh",
+            "resources": {
+                "cpu": 4,
+                "gpu": 0,
+                "memory": 8000,
+                "storage": 20000,
+                "max_file_size": 2000
+            },
+            "params": [
+                {
+                    "key": "cellset_paths",
+                    "name": "Cellsets",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Cellsets containing the footprints for MSR computation, as well as the traces for outputting registered cellsets. [.h5/.hdf5, .isxd]",
+                    "type": {
+                        "is_source": true,
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 0
+                        },
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "h5",
+                            "hdf5",
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "caiman_data",
+                                "file_structure": "unknown",
+                                "file_format": "h5"
+                            },
+                            {
+                                "file_type": "caiman_data",
+                                "file_structure": "unknown",
+                                "file_format": "hdf5"
+                            },
+                            {
+                                "file_type": "cell_set",
+                                "file_structure": "binary",
+                                "file_format": "isxd"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "template_paths",
+                    "name": "Template Images",
+                    "required": true,
+                    "hidden": false,
+                    "help": "Template images corresponding to the input cellsets. [.tif/.tiff, .isxd]",
+                    "type": {
+                        "is_source": true,
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 1
+                        },
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "tif",
+                            "tiff",
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "image",
+                                "file_structure": "image",
+                                "file_format": "tif"
+                            },
+                            {
+                                "file_type": "image",
+                                "file_structure": "image",
+                                "file_format": "tiff"
+                            },
+                            {
+                                "file_type": "miniscope_image",
+                                "file_structure": "image",
+                                "file_format": "isxd"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "eventset_paths",
+                    "name": "(optional) Eventsets",
+                    "required": false,
+                    "hidden": false,
+                    "help": "(optional) Eventsets containing the neural events for outputting registered eventsets. If Cellsets were provided as .h5/.hdf5, then they already contain Eventsets. [.isxd]",
+                    "type": {
+                        "is_source": true,
+                        "param_type": "ToolPathParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 2
+                        },
+                        "is_dir": false,
+                        "multiple": true,
+                        "file_formats": [
+                            "isxd"
+                        ],
+                        "file_filters": [
+                            {
+                                "file_type": "neural_events",
+                                "file_structure": "binary",
+                                "file_format": "isxd"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "align_flag",
+                    "name": "Align Template Images",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `align_flag`] \"Align the templates before matching.\" [bool]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 0
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "use_opt_flow",
+                    "name": "Use Optical Flow",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `use_opt_flow`] \"Use dense optical flow to align templates.\" [bool]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 1
+                        }
+                    },
+                    "default": false
+                },
+                {
+                    "key": "max_shifts",
+                    "name": "Maximum x/y Shifts",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `max_shifts`] \"Max shifts in x and y.\" [int]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 2
+                        },
+                        "min": 0.0
+                    },
+                    "default": 10.0
+                },
+                {
+                    "key": "max_thr",
+                    "name": "Footprint Binarization Threshold",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `max_thr`] \"Max threshold parameter before binarization.\" For each footprint, pixels below `max_thr` * footprint maximum amplitude will be set to 0. [float]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 3
+                        },
+                        "min": 0.0,
+                        "max": 1.0
+                    },
+                    "default": 0.0
+                },
+                {
+                    "key": "max_dist",
+                    "name": "Maximum Footprint Centroid Distance",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `max_dist`] \"Max distance between centroids.\" Any pair of footprints with centroids more distant than `max_dist` will be discarded from potential matches. [float]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 4
+                        },
+                        "min": 0.0
+                    },
+                    "default": 10.0
+                },
+                {
+                    "key": "thresh_cost",
+                    "name": "Maximum Footprint Disjunction",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `thresh_cost`] \"Maximum distance considered.\" Cost is defined as 1 - Jaccard Index (degree of overlap). Higher values of `thresh_cost` will thus relax overlap requirement for footprints to be considered a match. [float]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 5
+                        },
+                        "min": 0.0,
+                        "max": 1.0
+                    },
+                    "default": 0.7
+                },
+                {
+                    "key": "enclosed_thr",
+                    "name": "Cost Threshold for Enclosed Footprints",
+                    "required": false,
+                    "hidden": false,
+                    "help": "[from CaImAn docs for `enclosed_thr`] \"If not None set distance to at most the specified value when ground truth is a subset of inferred.\" Effectively caps cost to 0.5 when one footprint is contained within another one. [None, float]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "display": {
+                            "group": "CaImAn MSR Parameters",
+                            "group_order": 6
+                        }
+                    }
+                },
+                {
+                    "key": "use_cell_status",
+                    "name": "Use Cell Status",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Cell status to use (either \"accepted\", \"accepted & undecided\", or \"all\").",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Custom Parameters",
+                            "group_order": 0
+                        },
+                        "choices": [
+                            "accepted",
+                            "accepted & undecided",
+                            "all"
+                        ],
+                        "display_options": [
+                            "accepted",
+                            "accepted & undecided",
+                            "all"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "accepted"
+                },
+                {
+                    "key": "min_n_regist_sess",
+                    "name": "Minimum Number of Registered Sessions",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Minimum number of sessions an ROI must be registered across to be outputted in the registered cellsets (and optional eventsets). [int]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "display": {
+                            "group": "Custom Parameters",
+                            "group_order": 1
+                        },
+                        "min": 1
+                    },
+                    "default": 1
+                },
+                {
+                    "key": "fp_thr_method",
+                    "name": "Footprint Thresholding Method",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Method for thresholding footprint contours: either \"nrg\" to keep the pixels that contribute up to a specified fraction of the footprint energy, or \"max\" to set to 0 pixels that have value less than a fraction of the maximum footprint value.",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 0
+                        },
+                        "choices": [
+                            "nrg",
+                            "max"
+                        ],
+                        "display_options": [
+                            "nrg",
+                            "max"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "nrg"
+                },
+                {
+                    "key": "fp_thr",
+                    "name": "Footprint Threshold",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Threshold for footprint contours, in terms of either footprint energy or maximum value, depending of the chosen Footprint Thresholding Method. Set to a value between 0.0 and 1.0, for rawer or smoother footprints, respectively. [float]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolFloatRangeParam",
+                        "param_datatype": "float",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 1
+                        },
+                        "min": 0.0,
+                        "max": 1.0
+                    },
+                    "default": 0.9
+                },
+                {
+                    "key": "cmap_div",
+                    "name": "Diverging Colormap",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Name of the Matplotlib diverging colormap to be used in the template image alignment preview figure. [str]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 2
+                        }
+                    },
+                    "default": "bwr"
+                },
+                {
+                    "key": "cmap",
+                    "name": "Colormap",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Name of the Matplotlib colormap to be used in the template images in preview figures. [str]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolStringParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 3
+                        }
+                    },
+                    "default": "gray"
+                },
+                {
+                    "key": "show_grid",
+                    "name": "Show Grid",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Show grid on the template images of preview figures. [bool]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 4
+                        }
+                    },
+                    "default": true
+                },
+                {
+                    "key": "ticks_step",
+                    "name": "Ticks Step",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Step for the x- and y-axis ticks. [int]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 5
+                        },
+                        "min": 1
+                    },
+                    "default": 100
+                },
+                {
+                    "key": "n_sample_cells",
+                    "name": "Number of Sample Cells",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Number of sample cells to be plotted in the registered traces preview figure. [int]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "display": {
+                            "group": "Visualization Parameters",
+                            "group_order": 6
+                        },
+                        "min": 1
+                    },
+                    "default": 20
+                }
+            ],
+            "results": [
+                {
+                    "group_key": "caiman_msr__caiman_msr",
+                    "group_name": "Caiman Msr  Caiman Msr",
+                    "group_type": "tool_output",
+                    "required": true,
+                    "multiple": false,
+                    "files": [
+                        {
+                            "result_key": "CaImAn_MSR_output",
+                            "result_name": "CaImAn MSR Output",
+                            "help": "Assignment table, unified footprints, and distance matrices outputted by CaImAn MSR.",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "h5"
+                            ],
+                            "file_type": "caiman_data"
+                        },
+                        {
+                            "result_key": "alignment_qc_metrics",
+                            "result_name": "Alignment QC Metrics",
+                            "help": "Table containing QC metrics for the alignment step of CaImAn MSR, such as pre- and post-alignment template image correlation, and average and maximum x/y shifts.",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "csv"
+                            ],
+                            "file_type": "caiman_data"
+                        },
+                        {
+                            "result_key": "CaImAn_MSR_metrics",
+                            "result_name": "CaImAn MSR Metrics",
+                            "help": "Table containing centroid distance and footprint overlap metrics for all registered cells.",
+                            "required": true,
+                            "multiple": false,
+                            "file_formats": [
+                                "csv"
+                            ],
+                            "file_type": "caiman_data"
+                        },
+                        {
+                            "result_key": "cellset_registered",
+                            "result_name": "Registered Inscopix Cellsets",
+                            "help": "Cellsets containing cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "cell_set"
+                        },
+                        {
+                            "result_key": "eventset_registered",
+                            "result_name": "Registered Inscopix Eventsets",
+                            "help": "Eventsets containing neural event (e.g., trains of deconvolved spikes) from cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+                            "required": true,
+                            "multiple": true,
+                            "file_formats": [
+                                "isxd"
+                            ],
+                            "file_type": "neural_events"
+                        }
+                    ]
+                }
+            ]
         }
     ],
     "version": "1.0.0"
