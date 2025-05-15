@@ -176,7 +176,6 @@ def test_caiman_msr(
         "preview_number_registered_cells_stacked_bars.svg",
         "preview_distance_overlap_histograms.svg",
         "preview_registered_traces.svg",
-        "preview_registered_events.svg",
         "preview_template_images_alignment.svg",
         "output_metadata.json",
     ]
@@ -185,6 +184,7 @@ def test_caiman_msr(
         "preview_traces_cellset_registered",
     ]
     if len(eventset_paths) > 0 and len(eventset_paths[0]) > 0:
+        fname_out_list.append("preview_registered_events.svg")
         fname_prefix_list.append("preview_eventset_registered")
     n_sessions = len(cellset_paths)
     for fname_prefix in fname_prefix_list:
