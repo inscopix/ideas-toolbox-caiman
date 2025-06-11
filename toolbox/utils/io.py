@@ -117,7 +117,7 @@ def load_template_image(
     Load a template image.
     """
     ext = os.path.splitext(template_path)[1]
-    if ext == ".tif":
+    if ext in [".tif", ".tiff"]:
         template_img = tifffile.imread(template_path).T
     elif ext == ".isxd":
         template_img = isx.Image.read(template_path).get_data().T
