@@ -215,6 +215,22 @@ def save_registered_cellsets_eventsets(
                 for x in df_assign_sub[f"name_in_{idx_session}"].tolist()
             ]
 
+            # try to obtain start time, which is only included in .h5/.hdf5
+            # files when computed from .isxd input movies
+            try:
+                start_metadata = model.movie_metadata["timingInfo"]["start"]
+                num = start_metadata["secsSinceEpoch"]["num"]
+                den = start_metadata["secsSinceEpoch"]["den"]
+                utc_offset = start_metadata["utcOffset"]
+
+                secs_since_epoch = isx.Duration._from_num_den(num, den)
+                start = isx.Time()._from_secs_since_epoch(
+                    secs_since_epoch=secs_since_epoch,
+                    utc_offset=utc_offset,
+                )
+            except AttributeError:
+                start = isx.Time()
+
             # L and fs refer to cellset length (or duration, in samples) and
             # sampling rate (in Hz), respectively
             L = rawC.shape[1]
@@ -225,6 +241,7 @@ def save_registered_cellsets_eventsets(
             timing = isx.Timing(
                 num_samples=L,
                 period=period,
+                start=start,
             )
             spacing = isx.Spacing(dims)
             cs_out = isx.CellSet.write(
