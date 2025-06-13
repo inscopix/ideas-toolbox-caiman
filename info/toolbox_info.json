@@ -2695,7 +2695,7 @@
             "name": "CaImAn Multi-Session Registration",
             "key": "caiman_msr__caiman_msr",
             "help": "Perform CaImAn Multi-Session Registration (MSR) on a set of cellsets and related template images.",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
