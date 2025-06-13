@@ -125,6 +125,16 @@ def load_template_image(
         raise IdeasError(
             f"File format `{ext}` is not supported for template images."
         )
+
+    # ensure template image has float data type, otherwise downstream code
+    # will break when normalizing it as `template1 /= template1.max()`
+    img_dtype = template_img.dtype
+    if img_dtype != float:
+        template_img = template_img.astype(float)
+        logger.info(
+            f"Changed template image data type from {img_dtype} to float"
+        )
+
     return template_img
 
 
