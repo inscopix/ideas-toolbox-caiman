@@ -1039,10 +1039,20 @@ def create_alignment_preview_figure(
     """
     n_sessions = len(templates)
 
-    figsize = (2 * dims[0] / 100, (n_sessions - 1) * dims[1] / 100)
+    n_cols = 2
+    n_rows = n_sessions - 1
+
+    # compute figsize based on FoV aspect ratio and a gain parameter
+    figsize_gain = 4
+    fov_aspect_ratio = dims[0] / dims[1]
+    figsize_relative = [n_cols * fov_aspect_ratio, n_rows]
+    # ensure at least `figsize_gain` on the smallest dimension
+    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
+    figsize = tuple([x * figsize_gain for x in figsize_relative])
+
     fig, axes = plt.subplots(
-        n_sessions - 1,
-        2,
+        n_rows,
+        n_cols,
         figsize=figsize,
         sharex=True,
         sharey=True,
@@ -1147,7 +1157,15 @@ def create_registered_cells_on_unified_image_preview_figure(
     )
 
     template = templates[-1]
-    figsize = [x / 50 for x in dims]
+
+    # compute figsize based on FoV aspect ratio and a gain parameter
+    figsize_gain = 8
+    fov_aspect_ratio = dims[0] / dims[1]
+    figsize_relative = [fov_aspect_ratio, 1]
+    # ensure at least `figsize_gain` on the smallest dimension
+    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
+    figsize = tuple([x * figsize_gain for x in figsize_relative])
+
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax.imshow(
         template.T,
@@ -1274,7 +1292,15 @@ def create_registered_cells_on_each_session_image_preview_figure(
 
     n_cols = np.ceil(np.sqrt(n_sessions)).astype(int)
     n_rows = np.ceil(n_sessions / n_cols).astype(int)
-    figsize = [x / 100 * y for x, y in zip(dims, (n_cols, n_rows))]
+
+    # compute figsize based on FoV aspect ratio and a gain parameter
+    figsize_gain = 5
+    fov_aspect_ratio = dims[0] / dims[1]
+    figsize_relative = [n_cols * fov_aspect_ratio, n_rows]
+    # ensure at least `figsize_gain` on the smallest dimension
+    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
+    figsize = tuple([x * figsize_gain for x in figsize_relative])
+
     fig, axes = plt.subplots(
         n_rows,
         n_cols,
