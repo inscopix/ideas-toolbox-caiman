@@ -619,3 +619,32 @@ def transform_assignments_matrix(
     ).reset_index(drop=True)
 
     return df_assignments, n_reg_cells_all
+
+
+@beartype
+def compute_FoV_preview_figsize(
+    *,
+    n_rows: int,
+    n_cols: int,
+    dims: Tuple[int, int],
+    figsize_gain: Union[float, int],
+) -> Tuple[Union[float, int], Union[float, int]]:
+    """
+    Compute figsize for Field of View (FoV)-based preview figures,
+    using FoV aspect ratio and a gain parameter.
+
+    :param n_rows: number of subplot rows
+    :param n_cols: number of subplot columns
+    :param dims: width and height of the FoV
+    :param figsize_gain: factor to scale figure size
+    """
+    fov_aspect_ratio = dims[0] / dims[1]
+    figsize_relative = [n_cols * fov_aspect_ratio, n_rows]
+
+    # ensure at least `figsize_gain` on the smallest dimension
+    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
+
+    # scale figure size
+    figsize = tuple([x * figsize_gain for x in figsize_relative])
+
+    return figsize

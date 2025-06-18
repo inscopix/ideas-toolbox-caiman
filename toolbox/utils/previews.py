@@ -30,6 +30,7 @@ from toolbox.utils.plots import (
 from toolbox.utils.utilities import (
     get_num_cells_by_status,
     get_file_size,
+    compute_FoV_preview_figsize,
 )
 
 # from typing import List
@@ -1043,12 +1044,12 @@ def create_alignment_preview_figure(
     n_rows = n_sessions - 1
 
     # compute figsize based on FoV aspect ratio and a gain parameter
-    figsize_gain = 4
-    fov_aspect_ratio = dims[0] / dims[1]
-    figsize_relative = [n_cols * fov_aspect_ratio, n_rows]
-    # ensure at least `figsize_gain` on the smallest dimension
-    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
-    figsize = tuple([x * figsize_gain for x in figsize_relative])
+    figsize = compute_FoV_preview_figsize(
+        n_rows=n_rows,
+        n_cols=n_cols,
+        dims=dims,
+        figsize_gain=4,
+    )
 
     fig, axes = plt.subplots(
         n_rows,
@@ -1159,12 +1160,12 @@ def create_registered_cells_on_unified_image_preview_figure(
     template = templates[-1]
 
     # compute figsize based on FoV aspect ratio and a gain parameter
-    figsize_gain = 8
-    fov_aspect_ratio = dims[0] / dims[1]
-    figsize_relative = [fov_aspect_ratio, 1]
-    # ensure at least `figsize_gain` on the smallest dimension
-    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
-    figsize = tuple([x * figsize_gain for x in figsize_relative])
+    figsize = compute_FoV_preview_figsize(
+        n_rows=1,
+        n_cols=1,
+        dims=dims,
+        figsize_gain=8,
+    )
 
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax.imshow(
@@ -1290,16 +1291,16 @@ def create_registered_cells_on_each_session_image_preview_figure(
     else:
         title_suffix = " registered"
 
-    n_cols = np.ceil(np.sqrt(n_sessions)).astype(int)
-    n_rows = np.ceil(n_sessions / n_cols).astype(int)
+    n_cols = int(np.ceil(np.sqrt(n_sessions)))
+    n_rows = int(np.ceil(n_sessions / n_cols))
 
     # compute figsize based on FoV aspect ratio and a gain parameter
-    figsize_gain = 5
-    fov_aspect_ratio = dims[0] / dims[1]
-    figsize_relative = [n_cols * fov_aspect_ratio, n_rows]
-    # ensure at least `figsize_gain` on the smallest dimension
-    figsize_gain = max([figsize_gain, figsize_gain / fov_aspect_ratio])
-    figsize = tuple([x * figsize_gain for x in figsize_relative])
+    figsize = compute_FoV_preview_figsize(
+        n_rows=n_rows,
+        n_cols=n_cols,
+        dims=dims,
+        figsize_gain=5,
+    )
 
     fig, axes = plt.subplots(
         n_rows,
