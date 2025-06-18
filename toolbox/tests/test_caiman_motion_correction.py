@@ -4,7 +4,6 @@ import shutil
 import pytest
 import isx
 import json
-import numpy as np
 import pandas as pd
 from PIL import Image
 from toolbox.tools.caiman_isx_academic import motion_correction

@@ -3,11 +3,6 @@ from beartype.typing import List, Optional, Tuple, Union
 import caiman as cm
 from caiman.utils import visualization
 import cv2
-from ideas.plots import (
-    save_neural_traces_preview,
-    save_footprints_preview,
-    EventSetPreview,
-)
 import imageio.v2 as iio
 import isx
 import logging
@@ -116,7 +111,6 @@ def generate_event_set_preview(eventset_filename: str, output_dir: str = None):
         output_svg_filepath=output_events_preview_filepath,
     )
     eventset_preview_obj.generate_preview()
-
     logger.info(
         f"Neural events preview saved "
         f"({os.path.basename(output_events_preview_filepath)}, "

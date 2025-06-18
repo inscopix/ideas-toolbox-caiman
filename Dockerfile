@@ -16,6 +16,11 @@ ENV VECLIB_MAXIMUM_THREADS=1
 
 ENV PATH="${PATH}:/ideas/.local/bin"
 
+ARG PACKAGE_REQS
+ARG PYTHON_VERSION=3.10.0
+ARG PYTHON=python3.10
+ENV PACKAGE_REQS=$PACKAGE_REQS
+
 # Create ideas user
 RUN addgroup ideas \
     && adduser --disabled-password --home /ideas --ingroup ideas ideas
@@ -30,20 +35,17 @@ RUN apt update && apt upgrade -y \
     && apt install -y gcc python3-dev \
     && apt install -y python3.10 python3.10-dev python3-pip python3.10-distutils git curl libgl1 ffmpeg \
     && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 \
-    && python3.10 -m pip install --no-cache-dir awscli==1.35.17 boto3==1.35.17 click requests Cython  \
-    setuptools==60.0.0 setuptools-scm==7.1.0 wheel
+    && ${PYTHON} -m pip install --no-cache-dir awscli==1.35.17 boto3==1.35.17 click requests Cython
 
 # Link python to specific version
-RUN ln -s /usr/bin/python3.10 /usr/bin/python
+RUN ln -s /usr/bin/${PYTHON} /usr/bin/python
 
 # Copy files needed by the toolbox
 COPY setup.py function_caller.py user_deps.txt pytest.ini install_imported_code.sh "resources/*" ./
 
 # Install Python packages
-RUN --mount=type=secret,id=ideas_github_token \
-    IDEAS_GITHUB_TOKEN=$(cat /run/secrets/ideas_github_token) \
-    python3.10 -m pip install -e . \
-    && python3.10 -m pip install tensorflow-2.8.0-cp310-cp310-linux_x86_64.whl
+RUN ${PYTHON} -m pip install --default-timeout=1000 -e . \
+    && ${PYTHON} -m pip install *.whl
 
 # Install user code from git repo if needed
 RUN /bin/bash install_imported_code.sh
@@ -60,6 +62,3 @@ COPY --chown=ideas info /ideas/info
 
 USER ideas
 CMD ["/bin/bash"]
-
-FROM base AS jupyter
-RUN python3.10 -m pip install jupyter

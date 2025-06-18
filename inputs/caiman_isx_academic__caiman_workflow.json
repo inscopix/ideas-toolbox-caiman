@@ -1,5 +1,5 @@
 {
-    "input_movie_files": ["/ideas/data/movie_part2.isxd"],
+    "input_movie_files": ["/ideas/data/data_endoscope.tif"],
     "parameters_file": ["/ideas/data/params_demo_pipeline_cnmfE.json"],
     "overwrite_analysis_table_params": true
 }

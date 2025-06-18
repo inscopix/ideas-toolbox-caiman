@@ -29,5 +29,5 @@ jobs:
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
-          version: "~= 24.2"
+          version: "~= 25.1"
 

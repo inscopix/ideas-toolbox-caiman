@@ -2,18 +2,12 @@
 REPO=inscopix
 PROJECT=ideas
 MODULE=toolbox
-IMAGE_NAME=caiman-isx-academic
+IMAGE_NAME=caiman
 VERSION=$(shell git describe --tags --always --dirty)
 IMAGE_TAG=${REPO}/${PROJECT}/${MODULE}/${IMAGE_NAME}:${VERSION}
 FULL_NAME=${REPO}/${PROJECT}/${MODULE}/${IMAGE_NAME}
 CONTAINER_NAME=${REPO}-${PROJECT}-${MODULE}-${IMAGE_NAME}-${VERSION}
 PLATFORM=linux/amd64
-
-# jupyter-lab configurations
-ifndef JUPYTERLAB_PORT
-	JUPYTERLAB_PORT=8889
-endif
-
 
 # this flag determines whether files should be 
 # dynamically renamed (if possible) after function 
@@ -27,31 +21,6 @@ ifndef TC_NO_RENAME
 	TC_NO_RENAME="true"
 endif
 
-
-# specify a different data dir to volume mount
-# when running the toolbox container for local testing
-ifndef DATA_DIR
-	DATA_DIR=$(PWD)/data
-endif
-
-
-# credentials
-IDEAS_GITHUB_TOKEN_FILE=.ideas-github-token
-
-# profiler
-ifndef IDEAS_PROFILER
-	IDEAS_PROFILER=0
-endif
-
-ifeq ($(IDEAS_PROFILER),1)
-define run_command
-    bash -c 'mkdir -p "/ideas/outputs/$1" \
-        && cd "/ideas/outputs/$1" \
-        && cp "/ideas/inputs/$1.json" "/ideas/outputs/$1/inputs.json" \
-        && ( ideas-tools-profiler & "/ideas/commands/$1.sh" ) \
-	    && rm "/ideas/outputs/$1/inputs.json"'
-endef
-else
 define run_command
     bash -c 'mkdir -p "/ideas/outputs/$1" \
         && cd "/ideas/outputs/$1" \
@@ -59,12 +28,8 @@ define run_command
         && "/ideas/commands/$1.sh" \
 	    && rm "/ideas/outputs/$1/inputs.json"'
 endef
-endif
 
-
-
-.PHONY: help verify-github-token build jupyter test clean
-
+.PHONY: help build test clean
 
 .DEFAULT_GOAL := build
 
@@ -73,41 +38,13 @@ clean:
 	-docker rm $(CONTAINER_NAME)
 	-docker images | grep $(FULL_NAME) | awk '{print $$1 ":" $$2}' | grep -v $(VERSION) | xargs docker rmi
 
-
-verify-github-token:
-	@echo "Verifying GitHub token"
-ifneq ($(shell test -f ${IDEAS_GITHUB_TOKEN_FILE} && echo yes),yes)
-	$(error The GitHub token file ${IDEAS_GITHUB_TOKEN_FILE} does not exist)
-endif
-
-
-build: verify-github-token
-	@echo "Building docker image..."
+build:
+	@PACKAGE_REQS=$$(if [ -f ../.dev_requirements.txt ]; then cat ../.dev_requirements.txt | grep -v "#" | tr '\n' ' '; else echo "ideas-public-python-utils@git+https://@github.com/inscopix/ideas-public-python-utils.git@0.0.17 caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.9 isx==2.0.1"; fi) && \
+	echo "Building docker image with PACKAGE_REQS: $$PACKAGE_REQS" && \
 	DOCKER_BUILDKIT=1 docker build . -t $(IMAGE_TAG) \
 		--platform ${PLATFORM} \
-		--target base \
-		--secret id=ideas_github_token,src=${IDEAS_GITHUB_TOKEN_FILE}
-
-
-jupyter: verify-github-token clean
-	@echo "Launching container with Jupyter lab..."
-	DOCKER_BUILDKIT=1 docker build . -t $(IMAGE_TAG)-jupyter \
-		--platform ${PLATFORM} \
-		--target jupyter \
-		--secret id=ideas_github_token,src=${IDEAS_GITHUB_TOKEN_FILE}
-	docker run -ti \
-			-v $(PWD)/commands:/ideas/commands \
-			-v $(PWD)/data:/ideas/data \
-			-v $(PWD)/inputs:/ideas/inputs \
-			-v $(PWD)/notebooks:/ideas/notebooks \
-			-v $(PWD)/outputs:/ideas/outputs \
-			-v $(PWD)/toolbox:/ideas/toolbox \
-			-p ${JUPYTERLAB_PORT}:${JUPYTERLAB_PORT} \
-			-e JUPYTERLAB_PORT=$(JUPYTERLAB_PORT) \
-			--name $(CONTAINER_NAME) \
-	    $(IMAGE_TAG)-jupyter \
-	    jupyter-lab --ip 0.0.0.0 --port $(JUPYTERLAB_PORT) --no-browser --allow-root --NotebookApp.token="" \
-	&& docker rm $(CONTAINER_NAME)
+		--build-arg PACKAGE_REQS="$$PACKAGE_REQS" \
+		--target base
 
 test: build clean 
 	@echo "Running toolbox tests..."
@@ -119,18 +56,9 @@ test: build clean
 		-v $(PWD)/inputs:/ideas/inputs \
 		-v $(PWD)/commands:/ideas/commands \
 		-w /ideas \
-		-e CODEBUILD_BUILD_ID=${CODEBUILD_BUILD_ID} \
-		-e IDEAS_GITHUB_TOKEN=$(shell cat ${IDEAS_GITHUB_TOKEN_FILE}) \
 		--name $(CONTAINER_NAME) \
 		${IMAGE_TAG} \
 		pytest $(TEST_ARGS)
-	
-toolbox-info:
-	@echo "Copying toolbox_info.json and inserting version number..."
-	@-mkdir -p $(PWD)/toolbox/tests/outputs
-	@jq '.version = "$(VERSION)"' info/toolbox_info.json > $(PWD)/toolbox/tests/outputs/toolbox_info.json 
-
-
 
 run: build clean
 	@bash check_tool.sh $(TOOL)
@@ -138,7 +66,7 @@ run: build clean
 	-rm -rf $(PWD)/outputs/
 	docker run \
 			--platform ${PLATFORM} \
-			-v ${DATA_DIR}:/ideas/data \
+			-v $(PWD)/data:/ideas/data \
 			-v $(PWD)/inputs:/ideas/inputs \
 			-v $(PWD)/commands:/ideas/commands \
 			-e TC_NO_RENAME=$(TC_NO_RENAME) \
@@ -146,4 +74,3 @@ run: build clean
 	    $(IMAGE_TAG) \
 		$(call run_command,$(TOOL)) \
 	&& docker cp $(CONTAINER_NAME):/ideas/outputs $(PWD)/outputs \
-	&& docker rm $(CONTAINER_NAME)
