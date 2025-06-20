@@ -1,0 +1,287 @@
+[
+    {
+        "key": "CaImAn_MSR_output",
+        "analysis_table_result_column_name": "CaImAn MSR Output",
+        "file_type": "caiman_data",
+        "file_format": "h5",
+        "file_structure": "unknown",
+        "file_category": "result",
+        "help": "Assignment matrix, aligned footprints and distance matrices outputted by CaImAn MSR",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "alignment_qc_metrics",
+        "analysis_table_result_column_name": "Alignment QC Metrics",
+        "file_type": "caiman_data",
+        "file_format": "csv",
+        "file_structure": "table",
+        "file_category": "result",
+        "help": "Table containing QC metrics for the alignment step of CaImAn MSR, such as pre- and post-alignment template image correlation, and average and maximum x/y shifts.",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "CaImAn_MSR_metrics",
+        "analysis_table_result_column_name": "CaImAn MSR Metrics",
+        "file_type": "caiman_data",
+        "file_format": "csv",
+        "file_structure": "table",
+        "file_category": "result",
+        "help": "Table containing centroid distance and footprint overlap metrics for all registered cells.",
+        "required": true,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "cellset_registered",
+        "analysis_table_result_column_name": "Registered Inscopix Cellsets",
+        "file_type": "cell_set",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Cellsets containing cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "eventset_registered",
+        "analysis_table_result_column_name": "Registered Inscopix Eventsets",
+        "file_type": "neural_events",
+        "file_format": "isxd",
+        "file_structure": "binary",
+        "file_category": "result",
+        "help": "Eventsets containing neural event (e.g., trains of deconvolved spikes) from cells registered in at least `min_n_reg_sess` sessions, in a unified order.",
+        "required": true,
+        "multiple": true,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "eventset_paths"
+        ],
+        "preview_of": []
+    },
+    {
+        "key": "preview_template_images_alignment",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Template images pre- and post-alignment. Each row illustrates alignment between each pair of consecutive sessions, with pre-alignment on the left and post-alignment on the right. Each panel shows a template image difference (template #2 - template #1), with red and blue representing higher pixel value for session #2 and session #1, respectively. Pearson's r correlation coefficients between session #1 and #2's pre- and post-alignment template images are displayed in subplot titles. Post-alignment (right panel) subplot title also shows maximum x/y shifts, in pixels. The diverging colormap, presence of the grid, and x/y ticks step are controllable through visualization parameters.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "template_paths"
+        ],
+        "preview_of": [
+            "alignment_qc_metrics"
+        ]
+    },
+    {
+        "key": "preview_registered_cells_on_proj_images",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Registered cells on projection images. Each panel shows the template image for a given session, with overlaid cell footprint contours and indices. Cells registered across sessions share the same footprint contour color. Gray contours without any index represent non-registered cells, when `Minimum Number of Registered Sessions` > 1. The template image colormap, footprint contour thresholding and smoothing, presence of the grid, and x/y ticks step are controllable through visualization parameters.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_registered_cells_on_unified_image",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Registered cells on unified image. Aligned cell footprint contours and indices are represented on the last session's template image, with contour and index color coding for the number of sessions across which a cell was registered (see embedded legend for more details). Gray contours without any index represent non-registered cells. The template image colormap, footprint contour thresholding and smoothing, presence of the grid, and x/y ticks step are controllable through visualization parameters.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_number_registered_cells_stacked_bars",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Number of registered cells across sessions. Each session has stacked bars, totalling to all input cells for this session, with bar color coding for the number of sessions across which cells were registered (same color code as in previous figure; see embedded legend for more details).",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_distance_overlap_histograms",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Histograms of centroid distance and overlap for registered and non-registered cells. Histogram bars and kernel density estimate (KDE) lines are shown in blue and orange for registered and non-registered cells, respectively. Note that in the MSR algorithm, cell-cell footprint centroid distance is computed for all cell pairs, but overlap is only computed for cell pairs with centroid distance < `Maximum Footprint Centroid Distance`. Also, overlap values < (1 - `Maximum Footprint Disjunction`) are automatically discarded. This explains the absence of registered cells' bars above `Maximum Footprint Centroid Distance` (top panel) or below 1 - `Maximum Footprint Disjunction` (bottom panel).",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_metrics"
+        ]
+    },
+    {
+        "key": "preview_registered_traces",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Fluorescence traces from registered cells. Each panel represents a session, and the same random sample of registered cells' fluorescence traces is shared across panels, with color coding for cell identity. Each trace is normalized by subtracting its session's minimum and dividing by its maximum range (max - min) across sessions. The number of sample cells to be displayed is controllable through visualization parameters.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_registered_events",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Neural events from registered cells. Each panel represents a session, and shows a raster plot of neural events for all registered cells. Greys colormap represents event amplitudes as shades of gray, with white representing the absence of events.",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths",
+            "eventset_paths",
+            "template_paths"
+        ],
+        "preview_of": [
+            "CaImAn_MSR_output"
+        ]
+    },
+    {
+        "key": "preview_footprints_cellset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Footprints from output cellset. Up to 20 cells, chosen across a range of SNRs, are highlighted. The corresponding fluorescence traces for the highlighted cells can be seen in the traces preview.",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": [
+            "cellset_registered"
+        ]
+    },
+    {
+        "key": "preview_traces_cellset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Fluorescence traces from output cellset. Samples cells were chosen pseudorandomly to represent the range of SNRs (and sorted highest to lowest). The corresponding spatial footprints can be seen in the spatial footprints preview.",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "cellset_paths"
+        ],
+        "preview_of": [
+            "cellset_registered"
+        ]
+    },
+    {
+        "key": "preview_eventset_registered",
+        "analysis_table_result_column_name": "Preview Registered Cells",
+        "file_type": "image",
+        "file_format": "svg",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Neural events from registered cells. (top) Raster plot of detected events for all cells; each cell is a row. (middle) Timecourse of the population-level average event rate. (bottom left) Histogram of the cell-level average event rates. (bottom right) Histogram of the cell-level average inter-event intervals.",
+        "required": false,
+        "multiple": true,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "eventset_paths"
+        ],
+        "preview_of": [
+            "eventset_registered"
+        ]
+    }
+]
