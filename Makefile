@@ -52,7 +52,6 @@ test: build clean
 	docker run \
 		--platform ${PLATFORM} \
 		-v $(PWD)/data:/ideas/data \
-		-v $(PWD)/outputs:/ideas/outputs \
 		-v $(PWD)/inputs:/ideas/inputs \
 		-v $(PWD)/commands:/ideas/commands \
 		-w /ideas \
