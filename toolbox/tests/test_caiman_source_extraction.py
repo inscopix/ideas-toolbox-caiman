@@ -1,15 +1,12 @@
 import os
-import cv2
 import shutil
 import pytest
 import isx
-import json
 import numpy as np
-import pandas as pd
-from PIL import Image
 from toolbox.tools.caiman_isx_academic import source_extraction
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
 from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.utilities import read_isxd_metadata
 
 
 DATA_DIR = "/ideas/data"
@@ -593,3 +590,47 @@ def test_caiman_source_extraction_params_from_file():
     assert eventset.get_cell_name(0) == exp_cell0_name
     assert eventset.get_cell_name(3) == exp_cell3_name
     assert exp_timing == eventset.timing
+
+
+def test_caiman_source_extraction_isxd_extra_properties():
+    """Verify that the CaImAn source extraction correctly copies the extra properties
+    in the json metadata of input isxd files to output isxd files"""
+    input_movie_files = [
+        os.path.join(DATA_DIR, "movie_part1_108x123x100.isxd"),
+        os.path.join(DATA_DIR, "movie_part2_108x123x63.isxd"),
+    ]
+
+    source_extraction(
+        input_movie_files=input_movie_files, min_corr=0.5, min_pnr=5
+    )
+
+    input_movie0_metadata = read_isxd_metadata(input_movie_files[0])
+    input_movie1_metadata = read_isxd_metadata(input_movie_files[1])
+
+    # first part of output series
+    output0_files = [
+        "cellset_raw.000.isxd",
+        "cellset_denoised.000.isxd",
+        "neural_events.000.isxd",
+    ]
+    for output0_file in output0_files:
+        output0_file_metadata = read_isxd_metadata(output0_file)
+        assert (
+            "extraProperties" in output0_file_metadata
+            and output0_file_metadata["extraProperties"]
+            == input_movie0_metadata["extraProperties"]
+        )
+
+    # second part of output series
+    output1_files = [
+        "cellset_raw.001.isxd",
+        "cellset_denoised.001.isxd",
+        "neural_events.001.isxd",
+    ]
+    for output1_file in output1_files:
+        output1_file_metadata = read_isxd_metadata(output1_file)
+        assert (
+            "extraProperties" in output1_file_metadata
+            and output1_file_metadata["extraProperties"]
+            == input_movie1_metadata["extraProperties"]
+        )

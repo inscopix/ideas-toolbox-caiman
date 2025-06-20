@@ -68,6 +68,23 @@
         "preview_of": []
     },
     {
+        "key": "local_corr_img",
+        "analysis_table_result_column_name": "Template Image",
+        "file_type": "image",
+        "file_format": "tif",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Local correlation image in TIF format",
+        "required": false,
+        "multiple": false,
+        "is_preview": false,
+        "is_output": true,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": []
+    },
+    {
         "key": "initialization_images",
         "analysis_table_result_column_name": "Initialization Images",
         "file_type": "",
@@ -217,6 +234,25 @@
         ],
         "preview_of": [
             "caiman_output"
+        ]
+    },
+    {
+        "key": "local_corr_img_preview",
+        "analysis_table_result_column_name": "Preview Template Image",
+        "file_type": "image",
+        "file_format": "png",
+        "file_structure": "image",
+        "file_category": "result",
+        "help": "Local correlation image (from local_corr_img.tif)",
+        "required": false,
+        "multiple": false,
+        "is_preview": true,
+        "is_output": false,
+        "parent_keys": [
+            "input_movie_files"
+        ],
+        "preview_of": [
+            "local_corr_img"
         ]
     }
 ]

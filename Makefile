@@ -39,7 +39,7 @@ clean:
 	-docker images | grep $(FULL_NAME) | awk '{print $$1 ":" $$2}' | grep -v $(VERSION) | xargs docker rmi
 
 build:
-	@PACKAGE_REQS=$$(if [ -f ../.dev_requirements.txt ]; then cat ../.dev_requirements.txt | grep -v "#" | tr '\n' ' '; else echo "ideas-public-python-utils@git+https://@github.com/inscopix/ideas-public-python-utils.git@0.0.17 caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.6 isx==2.0.0"; fi) && \
+	@PACKAGE_REQS=$$(if [ -f ../.dev_requirements.txt ]; then cat ../.dev_requirements.txt | grep -v "#" | tr '\n' ' '; else echo "ideas-public-python-utils@git+https://@github.com/inscopix/ideas-public-python-utils.git@0.0.17 caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.9 isx==2.0.1"; fi) && \
 	echo "Building docker image with PACKAGE_REQS: $$PACKAGE_REQS" && \
 	DOCKER_BUILDKIT=1 docker build . -t $(IMAGE_TAG) \
 		--platform ${PLATFORM} \
@@ -52,7 +52,6 @@ test: build clean
 	docker run \
 		--platform ${PLATFORM} \
 		-v $(PWD)/data:/ideas/data \
-		-v $(PWD)/outputs:/ideas/outputs \
 		-v $(PWD)/inputs:/ideas/inputs \
 		-v $(PWD)/commands:/ideas/commands \
 		-w /ideas \

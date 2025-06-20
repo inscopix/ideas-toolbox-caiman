@@ -1,15 +1,10 @@
 import os
-import cv2
 import shutil
 import pytest
 import isx
-import json
 import numpy as np
-import pandas as pd
-from PIL import Image
 from toolbox.tools.caiman_isx_academic import spike_extraction
-from caiman.source_extraction.cnmf.cnmf import load_CNMF
-from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.utilities import read_isxd_metadata
 
 
 DATA_DIR = "/ideas/data"
@@ -424,3 +419,53 @@ def test_caiman_spike_extraction_isxd_movie_series_with_unordered_inputs():
         [eventset1.get_cell_name(j) for j in range(eventset1.num_cells)]
     )
     assert (exp_cell_names == act_eventset_names1).all()
+
+
+def test_caiman_spike_extraction_isxd_extra_properties():
+    """Verify that the CaImAn spike extraction correctly copies the extra properties
+    in the json metadata of input isxd files to output isxd files"""
+    input_cellset_files = [
+        os.path.join(DATA_DIR, "cellset_series_part1.isxd"),
+        os.path.join(DATA_DIR, "cellset_series_part2.isxd"),
+    ]
+
+    spike_extraction(
+        input_cellset_files=input_cellset_files,
+        bl="auto",
+        c1="auto",
+        g="auto",
+        sn="auto",
+        p=2,
+        method_deconvolution="oasis",
+        bas_nonneg=True,
+        noise_method="logmexp",
+        noise_range="0.25,0.5",
+        s_min=None,
+        optimize_g=False,
+        fudge_factor=0.96,
+        lags=5,
+        solvers="ECOS,SCS",
+    )
+
+    input_cellset0_metadata = read_isxd_metadata(input_cellset_files[0])
+    input_cellset1_metadata = read_isxd_metadata(input_cellset_files[1])
+
+    # first part of output series
+    output0_files = ["cellset_denoised.000.isxd", "neural_events.000.isxd"]
+    for output0_file in output0_files:
+        output0_file_metadata = read_isxd_metadata(output0_file)
+        assert (
+            "extraProperties" in output0_file_metadata
+            and output0_file_metadata["extraProperties"]
+            == input_cellset0_metadata["extraProperties"]
+        )
+
+    # second part of output series
+    output1_files = ["cellset_denoised.001.isxd", "neural_events.001.isxd"]
+    for output1_file in output1_files:
+        output1_file_metadata = read_isxd_metadata(output1_file)
+        assert (
+            "extraProperties" in output1_file_metadata
+            and output1_file_metadata["extraProperties"]
+            == input_cellset1_metadata["extraProperties"]
+        )

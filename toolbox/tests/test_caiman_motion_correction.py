@@ -4,13 +4,10 @@ import shutil
 import pytest
 import isx
 import json
-import numpy as np
 import pandas as pd
 from PIL import Image
 from toolbox.tools.caiman_isx_academic import motion_correction
-from caiman.source_extraction.cnmf.cnmf import load_CNMF
-from toolbox.utils.exceptions import IdeasError
-
+from toolbox.utils.utilities import read_isxd_metadata
 
 DATA_DIR = "/ideas/data"
 
@@ -1973,3 +1970,40 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
         }
     }
     assert exp_mc_qc_metadata == act_mc_qc_metadata
+
+
+def test_caiman_motion_correction_isxd_extra_properties():
+    """Verify that the CaImAn motion correction algorithm correctly copies the extra properties
+    in the json metadata of input isxd files to output isxd files"""
+    input_movie_files = [
+        os.path.join(DATA_DIR, "movie_part1_108x123x100.isxd"),
+        os.path.join(DATA_DIR, "movie_part2_108x123x63.isxd"),
+    ]
+
+    motion_correction(
+        input_movie_files=input_movie_files,
+        output_movie_format="isxd",
+    )
+
+    input_movie0_metadata = read_isxd_metadata(input_movie_files[0])
+    input_movie1_metadata = read_isxd_metadata(input_movie_files[1])
+
+    # first part of output series
+    output0_files = ["mc_movie.000.isxd"]
+    for output0_file in output0_files:
+        output0_file_metadata = read_isxd_metadata(output0_file)
+        assert (
+            "extraProperties" in output0_file_metadata
+            and output0_file_metadata["extraProperties"]
+            == input_movie0_metadata["extraProperties"]
+        )
+
+    # second part of output series
+    output1_files = ["mc_movie.001.isxd"]
+    for output1_file in output1_files:
+        output1_file_metadata = read_isxd_metadata(output1_file)
+        assert (
+            "extraProperties" in output1_file_metadata
+            and output1_file_metadata["extraProperties"]
+            == input_movie1_metadata["extraProperties"]
+        )

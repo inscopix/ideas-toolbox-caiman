@@ -5,38 +5,43 @@ set_start_method("spawn", force=True)
 from typing import Optional, List
 import numpy as np
 import isx
+import logging
 import shutil
 import os
 import ast
 import cv2
 import psutil
-from matplotlib.image import imsave
 import caiman as cm
-from caiman.source_extraction.cnmf import params as params
 from caiman.motion_correction import MotionCorrect
 from caiman.source_extraction import cnmf
+from caiman.source_extraction.cnmf import params as params
 from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
-from toolbox.utils.exceptions import IdeasError
-from toolbox.utils.utilities import movie_series, cell_set_series
-from toolbox.utils.utilities import get_file_size
 from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
     write_cell_statuses,
+    save_local_correlation_image,
 )
-from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
+from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.metadata import (
+    generate_caiman_motion_correction_metadata,
+    generate_caiman_spike_extraction_metadata,
+)
 from toolbox.utils.previews import (
     generate_caiman_motion_corrected_previews,
     generate_initialization_images_preview,
     generate_cell_set_previews,
     generate_event_set_preview,
+    generate_local_correlation_image_preview,
 )
-from toolbox.utils.metadata import (
-    generate_caiman_motion_correction_metadata,
-    generate_caiman_spike_extraction_metadata,
+from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
+from toolbox.utils.utilities import (
+    movie_series,
+    cell_set_series,
+    get_file_size,
+    copy_isxd_extra_properties,
+    read_isxd_metadata,
 )
-
-import logging
 
 logger = logging.getLogger()
 
@@ -46,7 +51,9 @@ def _run_caiman_workflow(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -115,6 +122,7 @@ def _run_caiman_workflow(
     SETTINGS
     :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
                                             will be overwritten by the values specified in the parameters file
+    :param save_img: if True, local correlation image will be saved as a standalone .tif file
 
     DATASET
     :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
@@ -301,7 +309,7 @@ def _run_caiman_workflow(
             )
 
     # determine input data frame rate & determine original input order
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    file_ext = os.path.splitext(input_movie_files[0])[1][1:].lower()
     original_input_movie_indices = list(range(len(input_movie_files)))
     if file_ext == "isxd":
         # validate input files form a valid series
@@ -312,6 +320,9 @@ def _run_caiman_workflow(
         original_input_movie_indices = [
             input_movie_files.index(f) for f in original_input_movie_files
         ]
+        logger.info(
+            f"Sorted input movies chronologically - original: {original_input_movie_files}, sorted: {input_movie_files}"
+        )
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
@@ -445,6 +456,11 @@ def _run_caiman_workflow(
     if "correlation_image" in locals():
         model.estimates.Cn = correlation_image
 
+    # include first isxd movie's metadata in output model
+    if file_ext == "isxd":
+        isxd_metadata = read_isxd_metadata(input_movie_files[0])
+        model.movie_metadata = isxd_metadata
+
     # save CaImAn output
     caiman_output_filename = os.path.join(output_dir, "caiman_output.hdf5")
     model.save(caiman_output_filename)
@@ -453,6 +469,17 @@ def _run_caiman_workflow(
         f"({os.path.basename(caiman_output_filename)}, "
         f"size: {get_file_size(caiman_output_filename)})"
     )
+
+    # (optional) save local correlation image
+    if save_img:
+        image_output_filename = os.path.join(output_dir, "local_corr_img.tif")
+        save_local_correlation_image(
+            correlation_image=correlation_image,
+            image_output_filename=image_output_filename,
+        )
+        generate_local_correlation_image_preview(
+            correlation_image=correlation_image,
+        )
 
     # ensure some cells were identified
     num_cells = len(model.estimates.C)
@@ -477,7 +504,9 @@ def caiman_workflow(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -545,6 +574,7 @@ def caiman_workflow(
     SETTINGS
     :param overwrite_analysis_table_params: if True and a parameters file is provided, the analysis table columns
                                             will be overwritten by the values specified in the parameters file
+    :param save_img: if True, local correlation image will be saved as a standalone .tif file
 
     DATASET
     :param fr: imaging rate in frames per second (If set to 'auto', the frame rate will be set based on file metadata if available. Otherwise, it will use CaImAn's default frame rate of 30)
@@ -612,7 +642,9 @@ def caiman_workflow(
         # Input Data
         input_movie_files=input_movie_files,
         parameters_file=parameters_file,
+        # Setting
         overwrite_analysis_table_params=overwrite_analysis_table_params,
+        save_img=save_img,
         # Dataset
         fr=fr,
         decay_time=decay_time,
@@ -848,7 +880,7 @@ def motion_correction(
     # determine input data frame rate & determine original input order
     file_ext = os.path.splitext(input_movie_files[0])[1][1:]
     original_input_movie_indices = list(range(len(input_movie_files)))
-    if file_ext == "isxd":
+    if file_ext.lower() == "isxd":
         # validate input files form a valid series
         # and order them by their start time
         # (keep track of the original order of the input files since this is used to statically name output files)
@@ -857,6 +889,9 @@ def motion_correction(
         original_input_movie_indices = [
             input_movie_files.index(f) for f in original_input_movie_files
         ]
+        logger.info(
+            f"Sorted input movies chronologically - original: {original_input_movie_files}, sorted: {input_movie_files}"
+        )
 
         mov = isx.Movie.read(input_movie_files[0])
         fr = 1e6 / mov.timing.period.to_usecs()
@@ -865,7 +900,7 @@ def motion_correction(
         )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext.lower() in ["avi", "mp4"]:
         cap = cv2.VideoCapture(input_movie_files[0])
         fr = cap.get(cv2.CAP_PROP_FPS)
         parameters.change_params(params_dict={"fr": fr})
@@ -984,7 +1019,9 @@ def source_extraction(
     # Input Files
     input_movie_files: List[str],
     parameters_file: Optional[List[str]] = None,
+    # Settings
     overwrite_analysis_table_params: bool = False,
+    save_img: bool = True,
     # Dataset
     fr: str = "auto",
     decay_time: float = 0.4,
@@ -1073,7 +1110,9 @@ def source_extraction(
         # Input Data
         input_movie_files=input_movie_files,
         parameters_file=parameters_file,
+        # Setting
         overwrite_analysis_table_params=overwrite_analysis_table_params,
+        save_img=save_img,
         # Dataset
         fr=fr,
         decay_time=decay_time,
@@ -1169,6 +1208,9 @@ def spike_extraction(
     original_input_cellset_indices = [
         input_cellset_files.index(f) for f in original_input_cellset_files
     ]
+    logger.info(
+        f"Sorted input cell sets chronologically - original: {original_input_cellset_files}, sorted: {input_cellset_files}"
+    )
 
     logger.info(
         "Converting input parameters to match CaImAn's expected format"
@@ -1320,6 +1362,15 @@ def spike_extraction(
             logger.warning(
                 f"Neural events preview could not be generated for file {os.path.basename(eventset_filename)}"
             )
+
+    logger.info(
+        "Copying extra properties from input isxd cell sets to output isxd files"
+    )
+    copy_isxd_extra_properties(
+        input_isxd_files=input_cellset_files,
+        original_input_indices=original_input_cellset_indices,
+        outputs_isxd_files=[cellset_denoised_filenames, eventset_filenames],
+    )
 
     # generate metadata
     logger.info("Generating spike extraction metadata")
