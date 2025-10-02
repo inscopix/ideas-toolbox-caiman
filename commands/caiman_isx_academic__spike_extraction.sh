@@ -1,1 +1,0 @@
-python3.10 /ideas/function_caller.py caiman_isx_academic__spike_extraction
