@@ -38,7 +38,8 @@ COPY pyproject.toml "resources/*" ./
 # Install Python packages
 RUN ${PYTHON} -m pip install --default-timeout=1000 .[dev] && ${PYTHON} -m pip install *.whl
 
-# COPY toolbox/ ./
+# Link python to specific version
+RUN ln -s /usr/bin/${PYTHON} /usr/bin/python
 
-# USER ideas
+USER ideas
 CMD ["/bin/bash"]

@@ -11,10 +11,9 @@ classifiers = [
     "Programming Language :: Python :: 3"
 ]
 dependencies = [
-    "requests==2.27.1",
-    "urllib3==1.26.16",
-    "configobj==5.0.8",
-    "pytest==7.4.2",
+    "caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.9",
+    "ideas-public-python-utils @ git+https://github.com/inscopix/ideas-public-python-utils.git@8387a61240591affa64be2dd6e5f794f8b231959",
+    "isx==2.1.0",
     "figrid==0.1.6",
     "tabulate==0.9.0",
     "protobuf==3.20.3",
@@ -36,16 +35,13 @@ dependencies = [
     "holoviews==1.19.1",
     "imageio==2.35.0",
     "imageio-ffmpeg==0.4.7",
-    "caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.9",
-    "ideas-public-python-utils @ git+https://github.com/inscopix/ideas-public-python-utils.git@8387a61240591affa64be2dd6e5f794f8b231959",
-    "isx==2.1.0",
 ]
 
 dynamic = ["version"]
 
 [project.optional-dependencies]
 dev = [
-    "pytest",
+    "pytest==7.4.2",
 ]
 
 [tool.black]
