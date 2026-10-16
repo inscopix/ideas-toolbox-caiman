@@ -1,11 +1,12 @@
 import os
 import shutil
-import pytest
+
 import isx
 import numpy as np
+import pytest
+
 from toolbox.tools.caiman_isx_academic import spike_extraction
 from toolbox.utils.utilities import read_isxd_metadata
-
 
 DATA_DIR = "/ideas/data"
 

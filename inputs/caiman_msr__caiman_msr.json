@@ -1,6 +1,7 @@
 {
     "cellset_paths": [
-        "/ideas/data/sample_cellset_msr_1.isxd",
+        "/ideas/data/sample_cellset_msr_1a.isxd",
+        "/ideas/data/sample_cellset_msr_1b.isxd",
         "/ideas/data/sample_cellset_msr_2.isxd"
     ],
     "template_paths": [
@@ -8,9 +9,11 @@
         "/ideas/data/sample_template_image_msr_2.tif"
     ],
     "eventset_paths": [
-        "/ideas/data/sample_eventset_msr_1.isxd",
-        "/ideas/data/sample_eventset_msr_2.isxd"
+        "/ideas/data/sample_eventset_msr_1a.isxd",
+        "/ideas/data/sample_eventset_msr_1b.isxd",
+        "/ideas/data/sample_eventset_msr_2a.isxd"
     ],
+    "contains_series": true,
     "align_flag": true,
     "use_opt_flow": false,
     "max_shifts": 80,
@@ -22,6 +25,8 @@
     "min_n_regist_sess": 2,
     "fp_thr_method": "nrg",
     "fp_thr": 0.9,
+    "pad_anchor": "disabled",
+    "padding_tolerance": 10,
     "cmap": "gray",
     "show_grid": true,
     "ticks_step": 100,

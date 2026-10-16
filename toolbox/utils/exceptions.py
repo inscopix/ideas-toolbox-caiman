@@ -1,7 +1,8 @@
 import logging
-import os
 import textwrap
 from inspect import getframeinfo, stack
+from pathlib import Path
+
 from tabulate import tabulate
 
 logger = logging.getLogger()
@@ -27,7 +28,7 @@ class IdeasError(Exception):
 
         caller = getframeinfo(stack()[1][0])
 
-        calling_module = os.path.basename(caller.filename)
+        calling_module = Path(caller.filename).name
         calling_module = calling_module.replace(".py", "")
 
         log_safe_message = message.replace("\r", "").replace("\n", "")
@@ -36,7 +37,7 @@ class IdeasError(Exception):
         # because ideas-BE requires each message to be on
         # a new line
         _ideas_error_logger(
-            f"ERR_{calling_module}_{str(caller.lineno)}",
+            f"ERR_{calling_module}_{caller.lineno!s}",
             log_safe_message,
         )
 

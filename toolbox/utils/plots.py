@@ -1,5 +1,5 @@
 import logging
-import os
+from pathlib import Path
 from typing import Literal
 
 import bokeh
@@ -10,19 +10,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy
+import scipy as sp
 import seaborn as sns
 from beartype import beartype
 from beartype.typing import List, Optional, Union
-from matplotlib import cm
-from matplotlib.collections import LineCollection
-from matplotlib.pyplot import matshow
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy import ndimage
 from ideas import io, measures, tracking
 from ideas.exceptions import IdeasError
 from ideas.types import NumpyFloat2DArray
 from ideas.utils import _find_coord_start, get_file_size
+from matplotlib import cm
+from matplotlib.collections import LineCollection
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 logger = logging.getLogger()
 
@@ -250,7 +248,7 @@ def plot_correlation_matrix(
 
     plt.sca(ax)
 
-    matshow(corr_matrix, vmin=-1, vmax=1, cmap="bwr", fignum=0)
+    plt.matshow(corr_matrix, vmin=-1, vmax=1, cmap="bwr", fignum=0)
 
 
 @beartype
@@ -377,7 +375,7 @@ def add_scalebar(
     """
     # get units
     if units == "microns" or units == "um":
-        units_text = "$\mu m$"
+        units_text = r"$\mu m$"
     elif units == "centimeters" or units == "cm":
         units_text = "$cm$"
 
@@ -438,7 +436,7 @@ def add_scalebar(
         x_pos=x_pos,
         y_pos=y_pos,
         x_length=scalebar_size / microns_per_pixel,
-        x_text="{} {}".format(scalebar_size, units_text),
+        x_text=f"{scalebar_size} {units_text}",
         scalebar_color=scalebar_color,
         text_color=text_color,
         fontsize=fontsize,
@@ -584,7 +582,7 @@ def save_neural_traces_preview(
 
     logger.info(f"Cellset has {len(status)} cells")
 
-    traces = scipy.stats.zscore(traces, axis=0, nan_policy="omit")
+    traces = sp.stats.zscore(traces, axis=0, nan_policy="omit")
 
     num_neurons = traces.shape[1]
     inches_per_neuron = 0.5
@@ -649,7 +647,7 @@ def save_neural_traces_preview(
     plt.close(fig)
 
     logger.info(
-        f"Traces preview saved ({os.path.basename(output_preview_filename)}, size: {get_file_size(output_preview_filename)})"
+        f"Traces preview saved ({Path(output_preview_filename).name}, size: {get_file_size(output_preview_filename)})"
     )
 
 
@@ -755,7 +753,7 @@ def save_footprints_preview(
     plt.close(fig)
 
     logger.info(
-        f"Footprints preview saved ({os.path.basename(output_preview_filename)}, size: {get_file_size(output_preview_filename)})"
+        f"Footprints preview saved ({Path(output_preview_filename).name}, size: {get_file_size(output_preview_filename)})"
     )
 
 
@@ -807,7 +805,7 @@ def arrange_axes_to_ordinal_values(d):
     return temp[idx, -1]
 
 
-class EventSetPreview(object):
+class EventSetPreview:
     """Class for generating eventset preview.
     This class is responsible for generating a preview from an eventset file.
     """
@@ -847,11 +845,9 @@ class EventSetPreview(object):
         self.output_svg_filepath = output_svg_filepath
 
         # Raise an exception if the events file does not exist
-        if not os.path.exists(self.filepath):
+        if not Path(self.filepath).exists():
             raise IdeasError(
-                "Input file {0} does not exist".format(
-                    os.path.basename(self.filepath)
-                )
+                f"Input file {Path(self.filepath).name} does not exist"
             )
 
         # Raise an exception the input file is not an isxd eventset
@@ -989,7 +985,7 @@ class EventSetPreview(object):
                 mean_event_rate_across_neurons = (
                     np.nanmean(rasters, axis=0) * self.sampling_rate
                 )
-                mean_event_rate_across_neurons = ndimage.gaussian_filter1d(
+                mean_event_rate_across_neurons = sp.ndimage.gaussian_filter1d(
                     input=mean_event_rate_across_neurons,
                     sigma=(
                         self.gaussian_filter_smoothing_sigma_time

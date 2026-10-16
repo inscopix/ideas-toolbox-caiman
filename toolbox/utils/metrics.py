@@ -1,11 +1,12 @@
-from beartype import beartype
-from beartype.typing import List, Tuple, Union
-from copy import deepcopy
-from ideas.exceptions import IdeasError
 import logging
-from numpy import ndarray
+from copy import deepcopy
+
 import numpy as np
 import pandas as pd
+from beartype import beartype
+from beartype.typing import List, Tuple, Union
+from ideas.exceptions import IdeasError
+from numpy import ndarray
 
 logger = logging.getLogger()
 

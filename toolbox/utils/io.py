@@ -1,20 +1,100 @@
+import logging
+from pathlib import Path
+
+import h5py
+import isx
+import numpy as np
+import pandas as pd
 from beartype import beartype
 from beartype.typing import List, Optional, Tuple, Union
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
-import h5py
 from ideas.exceptions import IdeasError
-import isx
-import logging
 from numpy import ndarray
-import numpy as np
-import os
-import pandas as pd
 from scipy.sparse import csc_matrix
 from tifffile import tifffile
+
 from toolbox.utils import config
 from toolbox.utils.metrics import process_xy_shifts
 
 logger = logging.getLogger()
+
+
+def _compute_padding_by_anchor(
+    *,
+    source_dims: Tuple[int, int],
+    target_dims: Tuple[int, int],
+    padding_anchor: str,
+) -> Tuple[int, int, int, int]:
+    """Compute per-side padding based on a corner anchor."""
+    source_w, source_h = source_dims
+    target_w, target_h = target_dims
+    pad_w = target_w - source_w
+    pad_h = target_h - source_h
+    if pad_w < 0 or pad_h < 0:
+        raise IdeasError(
+            f"Target FoV dimensions {target_dims} must be >= source dimensions "
+            f"{source_dims}."
+        )
+
+    if padding_anchor == "top-left":
+        return 0, pad_w, 0, pad_h
+    if padding_anchor == "top-right":
+        return pad_w, 0, 0, pad_h
+    if padding_anchor == "bottom-left":
+        return 0, pad_w, pad_h, 0
+    if padding_anchor == "bottom-right":
+        return pad_w, 0, pad_h, 0
+    raise IdeasError(
+        f"`padding_anchor` {padding_anchor} not recognized. "
+        "Expected one of ['top-left', 'top-right', 'bottom-left', "
+        "'bottom-right']."
+    )
+
+
+def _pad_image_to_fov(
+    *,
+    image: ndarray,
+    source_dims: Tuple[int, int],
+    target_dims: Tuple[int, int],
+    padding_anchor: str,
+) -> ndarray:
+    """Pad a 2D image to target FoV dimensions (width, height)."""
+    pad_left, pad_right, pad_top, pad_bottom = _compute_padding_by_anchor(
+        source_dims=source_dims,
+        target_dims=target_dims,
+        padding_anchor=padding_anchor,
+    )
+    if all(x == 0 for x in [pad_left, pad_right, pad_top, pad_bottom]):
+        return image
+    return np.pad(
+        image,
+        ((pad_top, pad_bottom), (pad_left, pad_right)),
+        mode="constant",
+    )
+
+
+@beartype
+def get_cellset_fov_dims(
+    *,
+    cellset_path: str,
+) -> Tuple[int, int]:
+    """
+    Read and return a cellset FoV dimensions as (width, height).
+    """
+    ext = Path(cellset_path).suffix
+    if ext in [".h5", ".hdf5"]:
+        model = load_CNMF(cellset_path)
+        return (int(model.dims[1]), int(model.dims[0]))
+    if ext == ".isxd":
+        cs = isx.CellSet.read(cellset_path)
+        if cs.num_cells == 0:
+            raise IdeasError(
+                f"No cell found in {cellset_path}; cannot determine FoV dimensions."
+            )
+        img = cs.get_cell_image_data(0)
+        cs.flush()
+        return (img.shape[1], img.shape[0])
+    raise IdeasError(f"File format `{ext}` is not supported for cellsets.")
 
 
 @beartype
@@ -22,10 +102,10 @@ def get_footprints_from_cellset(
     *,
     cellset_path: str,
     use_cell_status: str,
-) -> Tuple[csc_matrix, List[str]]:
+) -> Tuple[csc_matrix, List[str], Tuple[int, int]]:
     """
-    Read a cellset and output footprints (as a Scipy sparse matrix)
-    and cell names.
+    Read a cellset and output footprints (as a Scipy sparse matrix),
+    cell names, and FoV dimensions as (width, height).
     """
     use_cell_status_dict = {
         "accepted": ["accepted"],
@@ -33,12 +113,12 @@ def get_footprints_from_cellset(
         "all": ["accepted", "undecided", "rejected"],
     }
 
-    ext = os.path.splitext(cellset_path)[1]
+    ext = Path(cellset_path).suffix
     if ext in [".h5", ".hdf5"]:
         model = load_CNMF(cellset_path)
         footprints_mat = model.estimates.A
         n_px_fov, n_cells = footprints_mat.shape
-        dims = (model.dims[1], model.dims[0])
+        dims = (int(model.dims[1]), int(model.dims[0]))
 
         # transpose h5/hdf5 footprints to match template dimensions
         fp_mat_tmp = footprints_mat.toarray()
@@ -103,9 +183,9 @@ def get_footprints_from_cellset(
 
     logger.info(
         f"Loaded {len(cell_names)} footprints of dimensions {dims} pixels "
-        f"from {os.path.basename(cellset_path)}"
+        f"from {Path(cellset_path).name}"
     )
-    return footprints_mat, cell_names
+    return footprints_mat, cell_names, dims
 
 
 @beartype
@@ -116,7 +196,7 @@ def load_template_image(
     """
     Load a template image.
     """
-    ext = os.path.splitext(template_path)[1]
+    ext = Path(template_path).suffix
     if ext in [".tif", ".tiff"]:
         template_img = tifffile.imread(template_path).T
     elif ext == ".isxd":
@@ -135,6 +215,31 @@ def load_template_image(
             f"Changed template image data type from {img_dtype} to float"
         )
 
+    # ensure template image doesn't have any NaN values, otherwise
+    # downstream code will also break for the same reasons as above
+    if np.isnan(template_img).any():
+        # get normal distribution parameters from the template image
+        mu = np.nanmean(template_img)
+        sd = np.nanstd(np.abs(template_img - mu)) / 2
+
+        # get location of NaN values in the template image
+        nan_mask = np.isnan(template_img)
+
+        # generate normally distributed random values
+        rand_mask = np.random.normal(
+            loc=mu,
+            scale=sd,
+            size=np.sum(nan_mask),
+        )
+
+        # replace NaN values by the random values generated above
+        template_img[nan_mask] = rand_mask
+        logger.info(
+            "Replaced NaN values by normally distributed random values of "
+            f"mean {mu:.2g} and standard deviation {sd:.2g} "
+            f"in template image {Path(template_path).name}."
+        )
+
     return template_img
 
 
@@ -150,10 +255,7 @@ def save_msr_output(
     """
     Save CaImAn MSR output variables in a .h5 file.
     """
-    msr_output_path = os.path.join(
-        output_dir,
-        config.MSR_OUTPUT_FNAME,
-    )
+    msr_output_path = str(Path(output_dir) / config.MSR_OUTPUT_FNAME)
 
     # make matchings compatible with h5 saving
     max_len = np.max([len(x) for x in matchings])
@@ -178,19 +280,33 @@ def save_registered_cellsets_eventsets(
     eventset_paths: List[Optional[str]],
     df_assignments: pd.DataFrame,
     output_dir: str,
+    rec_to_sess_lookup: Optional[dict[int, int]] = None,
+    output_fov_dims: Optional[Tuple[int, int]] = None,
+    output_padding_anchor: str = "disabled",
 ) -> Tuple[List[str], List[Optional[str]]]:
     """
     Save cellsets and eventsets containing registered cells in a unified order.
     """
+    if output_fov_dims is not None and output_padding_anchor == "disabled":
+        raise IdeasError(
+            "When `output_fov_dims` is provided, `output_padding_anchor` must be "
+            "one of ['top-left', 'top-right', 'bottom-left', "
+            "'bottom-right'], not 'disabled'."
+        )
+
     cs_out_paths = []
     es_out_paths = []
-    for idx_session, (cs_path, es_path) in enumerate(
+    for idx_rec, (cs_path, es_path) in enumerate(
         zip(cellset_paths, eventset_paths)
     ):
-        cs_out_name = f"{config.CS_REG_PREFIX}.{idx_session:03g}.isxd"
-        cs_out_path = os.path.join(output_dir, cs_out_name)
-        es_out_name = f"{config.ES_REG_PREFIX}.{idx_session:03g}.isxd"
-        es_out_path = os.path.join(output_dir, es_out_name)
+        if rec_to_sess_lookup is not None:
+            idx_session = rec_to_sess_lookup[idx_rec]
+        else:
+            idx_session = idx_rec
+        cs_out_name = f"{config.CS_REG_PREFIX}.{idx_rec:03g}.isxd"
+        cs_out_path = str(Path(output_dir) / cs_out_name)
+        es_out_name = f"{config.ES_REG_PREFIX}.{idx_rec:03g}.isxd"
+        es_out_path = str(Path(output_dir) / es_out_name)
 
         df_assign_sub = df_assignments.loc[
             :, ["name", idx_session, f"name_in_{idx_session}"]
@@ -198,12 +314,19 @@ def save_registered_cellsets_eventsets(
         df_assign_sub[idx_session] = df_assign_sub[idx_session].astype(int)
         df_assign_sub = df_assign_sub.reset_index(drop=True)
 
-        ext = os.path.splitext(cs_path)[1]
+        ext = Path(cs_path).suffix
         if ext in [".h5", ".hdf5"]:
             # below, A and S refer to matrices of cell footprints and
             # deconvolved spikes, as defined in CaImAn
             model = load_CNMF(cs_path)
             dims = model.dims
+            source_dims = (int(dims[1]), int(dims[0]))
+            if output_fov_dims is not None:
+                target_dims = output_fov_dims
+                spacing_dims = (target_dims[1], target_dims[0])
+            else:
+                target_dims = source_dims
+                spacing_dims = dims
             A = model.estimates.A.toarray()
             n_cells = A.shape[1]
             A = A.reshape(dims[1], dims[0], n_cells)
@@ -253,16 +376,24 @@ def save_registered_cellsets_eventsets(
                 period=period,
                 start=start,
             )
-            spacing = isx.Spacing(dims)
+            spacing = isx.Spacing(spacing_dims)
             cs_out = isx.CellSet.write(
                 file_path=cs_out_path, timing=timing, spacing=spacing
             )
             for idx_out, (reg_cell_name, idx_cell) in enumerate(
                 zip(reg_cell_names, idx_cells)
             ):
+                image = A[:, idx_cell].reshape(source_dims[1], source_dims[0])
+                if output_fov_dims is not None:
+                    image = _pad_image_to_fov(
+                        image=image,
+                        source_dims=source_dims,
+                        target_dims=target_dims,
+                        padding_anchor=output_padding_anchor,
+                    )
                 cs_out.set_cell_data(
                     index=idx_out,
-                    image=A[:, idx_cell],
+                    image=image.reshape(-1),
                     trace=rawC[idx_cell, :],
                     name=reg_cell_name,
                 )
@@ -300,12 +431,26 @@ def save_registered_cellsets_eventsets(
                 for x in df_assign_sub[f"name_in_{idx_session}"].tolist()
             ]
             cs_out = isx.CellSet.write(
-                file_path=cs_out_path, timing=cs.timing, spacing=cs.spacing
+                file_path=cs_out_path,
+                timing=cs.timing,
+                spacing=(
+                    isx.Spacing((output_fov_dims[1], output_fov_dims[0]))
+                    if output_fov_dims is not None
+                    else cs.spacing
+                ),
             )
             for idx_out, (reg_cell_name, idx_cell) in enumerate(
                 zip(reg_cell_names, idx_cells)
             ):
                 image = cs.get_cell_image_data(idx_cell)
+                if output_fov_dims is not None:
+                    source_dims = (image.shape[1], image.shape[0])
+                    image = _pad_image_to_fov(
+                        image=image,
+                        source_dims=source_dims,
+                        target_dims=output_fov_dims,
+                        padding_anchor=output_padding_anchor,
+                    )
                 trace = cs.get_cell_trace_data(idx_cell)
                 cs_out.set_cell_data(
                     index=idx_out, image=image, trace=trace, name=reg_cell_name
@@ -359,9 +504,8 @@ def save_alignment_metrics_csv(
     """
     Save alignment metrics for all pairs of sessions in a .csv file.
     """
-    align_metrics_csv_path = os.path.join(
-        output_dir,
-        config.ALIGN_METRICS_CSV_FNAME,
+    align_metrics_csv_path = str(
+        Path(output_dir) / config.ALIGN_METRICS_CSV_FNAME
     )
 
     columns = [
@@ -420,10 +564,7 @@ def save_msr_metrics_csv(
     """
     Save MSR metrics for all matches in a .csv file.
     """
-    msr_metrics_csv_path = os.path.join(
-        output_dir,
-        config.MSR_METRICS_CSV_FNAME,
-    )
+    msr_metrics_csv_path = str(Path(output_dir) / config.MSR_METRICS_CSV_FNAME)
 
     columns = [
         "registered_cell_name",

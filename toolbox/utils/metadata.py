@@ -1,15 +1,15 @@
+import json
+import logging
+from pathlib import Path
+
+import cv2
+import isx
+import numpy as np
+import pandas as pd
 from beartype import beartype
 from beartype.typing import List, Optional, Tuple, Union
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
-import cv2
-import isx
-import json
-import logging
 from numpy import ndarray
-import numpy as np
-import os
-import pandas as pd
-from pathlib import Path
 from PIL import Image
 from scipy.sparse import csc_matrix
 
@@ -21,8 +21,8 @@ from toolbox.utils.metrics import (
     compute_distance_matrix_metrics,
 )
 from toolbox.utils.utilities import (
-    compute_sampling_rate,
     compute_end_time,
+    compute_sampling_rate,
     get_num_cells_by_status,
     read_isxc_metadata,
     read_isxd_metadata,
@@ -205,26 +205,25 @@ def get_efocus(input_filename, tmp_dir="/tmp"):
     :return: efocus value
     """
     # parse input file name
-    file_basename, file_extension = os.path.splitext(
-        os.path.basename(input_filename)
-    )
-    file_extension = file_extension.lower()
+    file_path = Path(input_filename)
+    file_basename = file_path.stem
+    file_extension = file_path.suffix.lower()
 
     # extract file metadata
     if file_extension == ".gpio":
         isx.export_gpio_to_isxd(input_filename, tmp_dir)
-        tmp_gpio_isxd_filename = os.path.join(
-            tmp_dir, file_basename + "_gpio.isxd"
+        tmp_gpio_isxd_filename = str(
+            Path(tmp_dir) / (file_basename + "_gpio.isxd")
         )
         metadata = read_isxd_metadata(tmp_gpio_isxd_filename)
-        os.remove(tmp_gpio_isxd_filename)
+        Path(tmp_gpio_isxd_filename).unlink()
     elif file_extension == ".imu":
         isx.export_gpio_to_isxd(input_filename, tmp_dir)
-        tmp_imu_isxd_filename = os.path.join(
-            tmp_dir, file_basename + "_imu.isxd"
+        tmp_imu_isxd_filename = str(
+            Path(tmp_dir) / (file_basename + "_imu.isxd")
         )
         metadata = read_isxd_metadata(tmp_imu_isxd_filename)
-        os.remove(tmp_imu_isxd_filename)
+        Path(tmp_imu_isxd_filename).unlink()
     elif file_extension == ".isxc":
         metadata = read_isxc_metadata(input_filename)
     elif file_extension == ".isxd":
@@ -418,7 +417,7 @@ def generate_caiman_workflow_metadata(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     metadata = {}
 
@@ -464,7 +463,7 @@ def generate_caiman_workflow_metadata(
         )
 
     # save metadata to file
-    output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
+    output_metadata_filename = str(Path(output_dir) / "output_metadata.json")
     with open(output_metadata_filename, "w") as f:
         json.dump(metadata, f, indent=4)
 
@@ -484,13 +483,13 @@ def generate_movie_metadata(
     :param efocus_vals: list of efocus values
     :param sampling_rate: frame rate of the movie
     """
-    file_ext = os.path.splitext(movie_filename)[1][1:]
-    if file_ext in ["isxd"]:
+    file_ext = Path(movie_filename).suffix.lower()
+    if file_ext in [".isxd"]:
         isx_metadata = read_isxd_metadata(movie_filename)
         timing_info = isx_metadata["timingInfo"]
         timing_info["sampling_rate"] = float(np.round(sampling_rate, 2))
         spacing_info = isx_metadata["spacingInfo"]
-    elif file_ext in ["tif", "tiff"]:
+    elif file_ext in [".tif", ".tiff"]:
         image_stack = Image.open(movie_filename)
         timing_info = {
             "numTimes": image_stack.n_frames,
@@ -503,7 +502,7 @@ def generate_movie_metadata(
                 "z": image_stack.n_frames,
             },
         }
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext in [".avi", ".mp4"]:
         cap = cv2.VideoCapture(movie_filename)
         timing_info = {
             "numTimes": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
@@ -587,7 +586,7 @@ def generate_caiman_motion_correction_metadata(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     metadata = {}
 
@@ -616,7 +615,7 @@ def generate_caiman_motion_correction_metadata(
     )
 
     # save metadata to file
-    output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
+    output_metadata_filename = str(Path(output_dir) / "output_metadata.json")
     with open(output_metadata_filename, "w") as f:
         json.dump(metadata, f, indent=4)
 
@@ -637,7 +636,7 @@ def generate_caiman_spike_extraction_metadata(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     metadata = {}
 
@@ -668,7 +667,7 @@ def generate_caiman_spike_extraction_metadata(
         )
 
     # save metadata to file
-    output_metadata_filename = os.path.join(output_dir, "output_metadata.json")
+    output_metadata_filename = str(Path(output_dir) / "output_metadata.json")
     with open(output_metadata_filename, "w") as f:
         json.dump(metadata, f, indent=4)
 
@@ -835,5 +834,5 @@ def create_msr_output_metadata(
             es_output_key = Path(es_output_name).stem
             metadata.update({es_output_key: metadata_es_output_dict})
 
-    with open(os.path.join(output_dir, "output_metadata.json"), "w") as f:
+    with open(str(Path(output_dir) / "output_metadata.json"), "w") as f:
         json.dump(metadata, f, indent=4)

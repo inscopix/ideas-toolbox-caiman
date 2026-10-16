@@ -1,11 +1,13 @@
-import os
-import cv2
-import shutil
-import pytest
-import isx
 import json
+import os
+import shutil
+
+import cv2
+import isx
 import pandas as pd
+import pytest
 from PIL import Image
+
 from toolbox.tools.caiman_isx_academic import motion_correction
 from toolbox.utils.utilities import read_isxd_metadata
 
@@ -692,7 +694,7 @@ def test_caiman_motion_correction_single_avi_file_with_user_specified_params():
     exp_height = 122
     exp_timing = isx.Timing(
         num_samples=exp_num_frames,
-        period=isx.Duration.from_usecs(1.0 / 20.0 * 1e6),
+        period=isx.Duration._from_num_den(33, 1000),
     )
     exp_spacing = isx.Spacing(num_pixels=(exp_height, exp_width))
 
@@ -815,7 +817,7 @@ def test_caiman_motion_correction_isxd_movie_series_piecewise_rigid():
             "numTimes": 100,
             "period": {"den": 1000, "num": 100},
             "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 123},
@@ -843,7 +845,7 @@ def test_caiman_motion_correction_isxd_movie_series_piecewise_rigid():
                 "secsSinceEpoch": {"den": 1000, "num": 30100},
                 "utcOffset": 0,
             },
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 123},
@@ -946,10 +948,10 @@ def test_caiman_motion_correction_isxd_movie_series_rigid():
         "x_shifts_rig",
         "y_shifts_rig",
     ]
-    assert act_qc_data["movie_index"].to_list() == [0] * 100 + [1] * 63
+    assert act_qc_data["movie_index"].to_list() == [0] * 63 + [1] * 100
     assert act_qc_data["movie_frame_index"].to_list() == list(
-        range(100)
-    ) + list(range(63))
+        range(63)
+    ) + list(range(100))
     assert act_qc_data["series_frame_index"].to_list() == list(range(163))
 
     # validate output metadata
@@ -968,7 +970,7 @@ def test_caiman_motion_correction_isxd_movie_series_rigid():
             "numTimes": 100,
             "period": {"den": 1000, "num": 100},
             "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 123},
@@ -996,7 +998,7 @@ def test_caiman_motion_correction_isxd_movie_series_rigid():
                 "secsSinceEpoch": {"den": 1000, "num": 30100},
                 "utcOffset": 0,
             },
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 123},
@@ -1242,7 +1244,7 @@ def test_caiman_motion_correction_avi_movie_series():
     input_movie_cap0 = cv2.VideoCapture(input_movie_files[0])
     input_movie_fps0 = input_movie_cap0.get(cv2.CAP_PROP_FPS)
     output_movie_fps0 = 1.0 / mc_movie_part0.timing.period.secs_float
-    assert input_movie_fps0 == output_movie_fps0
+    assert input_movie_fps0 == 2 * output_movie_fps0
 
     input_movie_frame_count0 = int(
         input_movie_cap0.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -1268,7 +1270,7 @@ def test_caiman_motion_correction_avi_movie_series():
     input_movie_cap1 = cv2.VideoCapture(input_movie_files[1])
     input_movie_fps1 = input_movie_cap1.get(cv2.CAP_PROP_FPS)
     output_movie_fps1 = 1.0 / mc_movie_part1.timing.period.secs_float
-    assert input_movie_fps1 == output_movie_fps1
+    assert input_movie_fps1 == 2 * output_movie_fps1
 
     input_movie_frame_count1 = int(
         input_movie_cap1.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -1322,9 +1324,9 @@ def test_caiman_motion_correction_avi_movie_series():
             "cropped": [],
             "dropped": [],
             "numTimes": 200,
-            "period": {"den": 1000, "num": 50},
+            "period": {"den": 1000, "num": 100},
             "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
-            "sampling_rate": 20.0,
+            "sampling_rate": 10.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 122},
@@ -1344,9 +1346,9 @@ def test_caiman_motion_correction_avi_movie_series():
             "cropped": [],
             "dropped": [],
             "numTimes": 126,
-            "period": {"den": 1000, "num": 50},
+            "period": {"den": 1000, "num": 100},
             "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
-            "sampling_rate": 20.0,
+            "sampling_rate": 10.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 108, "y": 122},
@@ -1773,14 +1775,14 @@ def test_caiman_motion_correction_avi_movie_series_to_tiff_output():
 
     # motion-corrected movie metadata
     exp_mc_movie_metadata0 = {
-        "timingInfo": {"numTimes": 200, "sampling_rate": 20.0},
+        "timingInfo": {"numTimes": 200, "sampling_rate": 10.0},
         "spacingInfo": {"numPixels": {"x": 108, "y": 122, "z": 200}},
         "microscope": {"focus": None},
     }
     assert exp_mc_movie_metadata0 == act_mc_movie_metadata0
 
     exp_mc_movie_metadata1 = {
-        "timingInfo": {"numTimes": 126, "sampling_rate": 20.0},
+        "timingInfo": {"numTimes": 126, "sampling_rate": 10.0},
         "spacingInfo": {"numPixels": {"x": 108, "y": 122, "z": 126}},
         "microscope": {"focus": None},
     }
@@ -1867,11 +1869,11 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
         "y_shifts_els",
     ]
     assert (
-        act_qc_data["movie_index"].to_list() == [0] * 100 + [1] * 95 + [2] * 34
+        act_qc_data["movie_index"].to_list() == [0] * 95 + [1] * 34 + [2] * 100
     )
     assert act_qc_data["movie_frame_index"].to_list() == list(
-        range(100)
-    ) + list(range(95)) + list(range(34))
+        range(95)
+    ) + list(range(34)) + list(range(100))
     assert act_qc_data["series_frame_index"].to_list() == list(range(229))
 
     # validate output metadata
@@ -1894,7 +1896,7 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
                 "secsSinceEpoch": {"den": 1000, "num": 30100},
                 "utcOffset": 0,
             },
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 128, "y": 128},
@@ -1919,7 +1921,7 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
                 "secsSinceEpoch": {"den": 1000, "num": 62300},
                 "utcOffset": 0,
             },
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 128, "y": 128},
@@ -1941,7 +1943,7 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
             "numTimes": 100,
             "period": {"den": 1000, "num": 100},
             "start": {"secsSinceEpoch": {"den": 1, "num": 0}, "utcOffset": 0},
-            "sampling_rate": 10.0,
+            "sampling_rate": 30.0,
         },
         "spacingInfo": {
             "numPixels": {"x": 128, "y": 128},
@@ -1961,7 +1963,7 @@ def test_caiman_motion_correction_isxd_movie_series_correct_order():
             "min_x_rigid_shift": -0.0,
             "max_x_rigid_shift": -0.0,
             "min_y_rigid_shift": -0.1,
-            "max_y_rigid_shift": -0.0,
+            "max_y_rigid_shift": 0.1,
             "min_x_pw_rigid_shift": -0.1,
             "max_x_pw_rigid_shift": 0.1,
             "min_y_pw_rigid_shift": -0.3,
