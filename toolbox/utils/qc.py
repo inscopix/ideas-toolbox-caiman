@@ -1,10 +1,9 @@
-import os
-import json
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from toolbox.utils.utilities import get_file_size
 import logging
+from pathlib import Path
+
+import pandas as pd
+
+from toolbox.utils.utilities import get_file_size
 
 logger = logging.getLogger()
 
@@ -56,6 +55,6 @@ def generate_motion_correction_quality_assessment_data(
 
     logger.info(
         f"Motion correction quality assessment data saved "
-        f"({os.path.basename(mc_qc_filename)}, "
+        f"({Path(mc_qc_filename).name}, "
         f"size: {get_file_size(mc_qc_filename)})"
     )

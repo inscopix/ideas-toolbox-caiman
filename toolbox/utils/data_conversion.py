@@ -1,23 +1,24 @@
-import os
-import isx
-import cv2
-import tifffile
+import logging
+from pathlib import Path
+
 import caiman as cm
+import cv2
+import isx
 import numpy as np
-from typing import List
+import tifffile
+
+from toolbox.utils.exceptions import IdeasError
+from toolbox.utils.metadata import generate_caiman_workflow_metadata
 from toolbox.utils.previews import (
     generate_caiman_workflow_previews,
 )
-from toolbox.utils.metadata import generate_caiman_workflow_metadata
-from toolbox.utils.utilities import get_file_size, copy_isxd_extra_properties
-from toolbox.utils.exceptions import IdeasError
-import logging
+from toolbox.utils.utilities import copy_isxd_extra_properties, get_file_size
 
 logger = logging.getLogger()
 
 
 def write_cell_statuses(
-    cell_statuses: List[str], cell_set_filenames: List[str]
+    cell_statuses: list[str], cell_set_filenames: list[str]
 ):
     """Write cell statuses to cell set files.
 
@@ -54,7 +55,7 @@ def convert_caiman_output_to_isxd(
             "No cells were identified by the algorithm. The CaImAn output will not be converted to corresponding ISXD files."
         )
         return
-    cell_names = ["C{:0>3d}".format(i) for i in range(num_cells)]
+    cell_names = [f"C{i:0>3d}" for i in range(num_cells)]
 
     # spacing info and footprints
     height = model.dims[0]
@@ -64,13 +65,13 @@ def convert_caiman_output_to_isxd(
     ).T.astype(np.float32)
 
     # get number of frames and timing from input isxd movies
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
-    if file_ext in ["isxd"]:
+    file_ext = Path(input_movie_files[0]).suffix.lower()
+    if file_ext in [".isxd"]:
         movies = [isx.Movie.read(f) for f in input_movie_files]
         num_frames_per_movie = [m.timing.num_samples for m in movies]
         timing_info = [m.timing for m in movies]
         spacing_info = [m.spacing for m in movies]
-    elif file_ext in ["tif", "tiff"]:
+    elif file_ext in [".tif", ".tiff"]:
         movies = [isx.Movie.read(f) for f in input_movie_files]
         num_frames_per_movie = [m.timing.num_samples for m in movies]
         timing_info = [
@@ -83,7 +84,7 @@ def convert_caiman_output_to_isxd(
             for m in movies
         ]
         spacing_info = [m.spacing for m in movies]
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext in [".avi", ".mp4"]:
         caps = [cv2.VideoCapture(f) for f in input_movie_files]
         num_frames_per_movie = [
             int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) for cap in caps
@@ -198,17 +199,17 @@ def convert_caiman_output_to_isxd(
         # log files created
         logger.info(
             f"Raw cell set saved "
-            f"({os.path.basename(cellset_raw_filename)}, "
+            f"({Path(cellset_raw_filename).name}, "
             f"size: {get_file_size(cellset_raw_filename)})"
         )
         logger.info(
             f"Denoised cell set saved "
-            f"({os.path.basename(cellset_denoised_filename)}, "
+            f"({Path(cellset_denoised_filename).name}, "
             f"size: {get_file_size(cellset_denoised_filename)})"
         )
         logger.info(
             f"Neural events saved "
-            f"({os.path.basename(eventset_filename)}, "
+            f"({Path(eventset_filename).name}, "
             f"size: {get_file_size(eventset_filename)})"
         )
 
@@ -252,7 +253,7 @@ def convert_caiman_output_to_isxd(
         + [global_cellset_filename],
     )
 
-    if file_ext in ["isxd"]:
+    if file_ext in [".isxd"]:
         logger.info(
             "Copying extra properties from input isxd movies to output isxd files"
         )
@@ -315,13 +316,13 @@ def convert_memmap_data_to_output_files(
     images = Yr.T.reshape((T,) + dims, order="F")
 
     # gather spacing and timing info for each movie file
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
-    if file_ext in ["isxd"]:
+    file_ext = Path(input_movie_files[0]).suffix.lower()
+    if file_ext in [".isxd"]:
         movies = [isx.Movie.read(f) for f in input_movie_files]
         num_frames_per_movie = [m.timing.num_samples for m in movies]
         timing_info = [m.timing for m in movies]
         spacing_info = [m.spacing for m in movies]
-    elif file_ext in ["tif", "tiff"]:
+    elif file_ext in [".tif", ".tiff"]:
         movies = [isx.Movie.read(f) for f in input_movie_files]
         num_frames_per_movie = [m.timing.num_samples for m in movies]
         timing_info = [
@@ -332,7 +333,7 @@ def convert_memmap_data_to_output_files(
             for m in movies
         ]
         spacing_info = [m.spacing for m in movies]
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext in [".avi", ".mp4"]:
         caps = [cv2.VideoCapture(f) for f in input_movie_files]
         num_frames_per_movie = [
             int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) for cap in caps
@@ -365,9 +366,9 @@ def convert_memmap_data_to_output_files(
     # write output movie files
     mc_movie_filenames = []
     for output_file_index, i in enumerate(original_input_movie_indices):
-        mc_movie_filename = os.path.join(
-            output_dir,
-            f"mc_movie.{str(output_file_index).zfill(3)}.{output_movie_format}",
+        mc_movie_filename = str(
+            Path(output_dir)
+            / f"mc_movie.{str(output_file_index).zfill(3)}.{output_movie_format}"
         )
         mc_movie_filenames.append(mc_movie_filename)
 
@@ -422,11 +423,11 @@ def convert_memmap_data_to_output_files(
 
         logger.info(
             f"Motion-corrected movie saved "
-            f"({os.path.basename(mc_movie_filename)}, "
+            f"({Path(mc_movie_filename).name}, "
             f"size: {get_file_size(mc_movie_filename)})"
         )
 
-    if file_ext in ["isxd"] and output_movie_format == "isxd":
+    if file_ext in [".isxd"] and output_movie_format == "isxd":
         logger.info(
             "Copying extra properties from input isxd movies to output isxd movies"
         )
@@ -452,6 +453,6 @@ def save_local_correlation_image(
     tifffile.tifffile.imwrite(image_output_filename, correlation_image)
     logger.info(
         "Local correlation image saved"
-        f"({os.path.basename(image_output_filename)}, )"
+        f"({Path(image_output_filename).name}, )"
         f"size: {get_file_size(image_output_filename)})"
     )

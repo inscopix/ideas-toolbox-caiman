@@ -2,25 +2,27 @@ from multiprocessing import set_start_method
 
 set_start_method("spawn", force=True)
 
-from typing import Optional, List
-import numpy as np
-import isx
+import ast
 import logging
 import shutil
-import os
-import ast
-import cv2
-import psutil
+from pathlib import Path
+from typing import List, Optional
+
 import caiman as cm
+import cv2
+import isx
+import numpy as np
+import psutil
 from caiman.motion_correction import MotionCorrect
 from caiman.source_extraction import cnmf
 from caiman.source_extraction.cnmf import params as params
 from caiman.source_extraction.cnmf.deconvolution import constrained_foopsi
+
 from toolbox.utils.data_conversion import (
     convert_caiman_output_to_isxd,
     convert_memmap_data_to_output_files,
-    write_cell_statuses,
     save_local_correlation_image,
+    write_cell_statuses,
 )
 from toolbox.utils.exceptions import IdeasError
 from toolbox.utils.metadata import (
@@ -29,17 +31,17 @@ from toolbox.utils.metadata import (
 )
 from toolbox.utils.previews import (
     generate_caiman_motion_corrected_previews,
-    generate_initialization_images_preview,
     generate_cell_set_previews,
     generate_event_set_preview,
+    generate_initialization_images_preview,
     generate_local_correlation_image_preview,
 )
 from toolbox.utils.qc import generate_motion_correction_quality_assessment_data
 from toolbox.utils.utilities import (
-    movie_series,
     cell_set_series,
-    get_file_size,
     copy_isxd_extra_properties,
+    get_file_size,
+    movie_series,
     read_isxd_metadata,
 )
 
@@ -49,7 +51,7 @@ logger = logging.getLogger()
 def _run_caiman_workflow(
     *,
     # Input Files
-    input_movie_files: List[str],
+    input_movie_files: list[str],
     parameters_file: Optional[List[str]] = None,
     # Settings
     overwrite_analysis_table_params: bool = False,
@@ -185,15 +187,15 @@ def _run_caiman_workflow(
     :param n_processes: Number of processes used for processing patches in parallel
     """
     # set output directory
-    output_dir = os.getcwd()
+    output_dir = str(Path.cwd())
 
     # copy caiman cell classification cnn model
     caiman_cnn_model_path = "/ideas/caiman_data/model"
-    if not os.path.exists(caiman_cnn_model_path):
-        os.makedirs(caiman_cnn_model_path)
+    if not Path(caiman_cnn_model_path).exists():
+        Path(caiman_cnn_model_path).mkdir(parents=True)
         for f in ["cnn_model.h5", "cnn_model.h5.pb", "cnn_model.json"]:
             shutil.copyfile(
-                f"/ideas/{f}", os.path.join(caiman_cnn_model_path, f)
+                f"/ideas/{f}", str(Path(caiman_cnn_model_path) / f)
             )
 
     # update n_processes to match available resources
@@ -286,12 +288,12 @@ def _run_caiman_workflow(
         if len(parameters_file) > 1:
             logger.warning(
                 f"More than 1 parameters files were provided. "
-                f"The first file '{os.path.basename(parameters_file[0])}' "
+                f"The first file '{Path(parameters_file[0]).name}' "
                 f"will be used for processing."
             )
 
         logger.info(
-            f"Loading parameters from input file '{os.path.basename(parameters_file[0])}'"
+            f"Loading parameters from input file '{Path(parameters_file[0]).name}'"
         )
         parameters.change_params_from_jsonfile(parameters_file[0])
 
@@ -309,9 +311,9 @@ def _run_caiman_workflow(
             )
 
     # determine input data frame rate & determine original input order
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:].lower()
+    file_ext = Path(input_movie_files[0]).suffix.lower()
     original_input_movie_indices = list(range(len(input_movie_files)))
-    if file_ext == "isxd":
+    if file_ext == ".isxd":
         # validate input files form a valid series
         # and order them by their start time
         # (keep track of the original order of the input files since this is used to statically name output files)
@@ -331,7 +333,7 @@ def _run_caiman_workflow(
         )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
-    elif file_ext in ["avi", "mp4"]:
+    elif file_ext in [".avi", ".mp4"]:
         cap = cv2.VideoCapture(input_movie_files[0])
         fr = cap.get(cv2.CAP_PROP_FPS)
         parameters.change_params(params_dict={"fr": fr})
@@ -399,7 +401,7 @@ def _run_caiman_workflow(
 
         logger.info(
             f"Motion corrected data written to memory-mapped file "
-            f"({os.path.basename(fname_new)}, "
+            f"({Path(fname_new).name}, "
             f"size: {get_file_size(fname_new)})"
         )
     else:
@@ -415,7 +417,7 @@ def _run_caiman_workflow(
 
         logger.info(
             f"Input data written to memory-mapped file "
-            f"({os.path.basename(fname_new)}, "
+            f"({Path(fname_new).name}, "
             f"size: {get_file_size(fname_new)})"
         )
 
@@ -462,17 +464,17 @@ def _run_caiman_workflow(
         model.movie_metadata = isxd_metadata
 
     # save CaImAn output
-    caiman_output_filename = os.path.join(output_dir, "caiman_output.hdf5")
+    caiman_output_filename = str(Path(output_dir) / "caiman_output.hdf5")
     model.save(caiman_output_filename)
     logger.info(
         f"CaImAn output saved "
-        f"({os.path.basename(caiman_output_filename)}, "
+        f"({Path(caiman_output_filename).name}, "
         f"size: {get_file_size(caiman_output_filename)})"
     )
 
     # (optional) save local correlation image
     if save_img:
-        image_output_filename = os.path.join(output_dir, "local_corr_img.tif")
+        image_output_filename = str(Path(output_dir) / "local_corr_img.tif")
         save_local_correlation_image(
             correlation_image=correlation_image,
             image_output_filename=image_output_filename,
@@ -502,7 +504,7 @@ def _run_caiman_workflow(
 def caiman_workflow(
     *,
     # Input Files
-    input_movie_files: List[str],
+    input_movie_files: list[str],
     parameters_file: Optional[List[str]] = None,
     # Settings
     overwrite_analysis_table_params: bool = False,
@@ -706,7 +708,7 @@ def caiman_workflow(
 def motion_correction(
     *,
     # Input Files
-    input_movie_files: List[str],
+    input_movie_files: list[str],
     parameters_file: Optional[List[str]] = None,
     overwrite_analysis_table_params: bool = False,
     # Dataset
@@ -786,7 +788,7 @@ def motion_correction(
     logger.info("CaImAn motion correction started")
 
     # set output directory
-    output_dir = os.getcwd()
+    output_dir = str(Path.cwd())
 
     # update n_processes to match available resources
     cpu_count = psutil.cpu_count()
@@ -848,12 +850,12 @@ def motion_correction(
         if len(parameters_file) > 1:
             logger.warning(
                 f"More than 1 parameters files were provided. "
-                f"The first file '{os.path.basename(parameters_file[0])}' "
+                f"The first file '{Path(parameters_file[0]).name}' "
                 f"will be used for processing."
             )
 
         logger.info(
-            f"Loading parameters from input file '{os.path.basename(parameters_file[0])}'"
+            f"Loading parameters from input file '{Path(parameters_file[0]).name}'"
         )
         parameters.change_params_from_jsonfile(parameters_file[0])
 
@@ -874,13 +876,13 @@ def motion_correction(
     if parameters.motion.get("motion_correct") in [False, None]:
         parameters.change_params(params_dict={"motion_correct": True})
         logger.info(
-            f"'motion_correct' set to 'True' to enable motion correction"
+            "'motion_correct' set to 'True' to enable motion correction"
         )
 
     # determine input data frame rate & determine original input order
-    file_ext = os.path.splitext(input_movie_files[0])[1][1:]
+    file_ext = Path(input_movie_files[0]).suffix.lower()[1:]
     original_input_movie_indices = list(range(len(input_movie_files)))
-    if file_ext.lower() == "isxd":
+    if file_ext.lower() == ".isxd":
         # validate input files form a valid series
         # and order them by their start time
         # (keep track of the original order of the input files since this is used to statically name output files)
@@ -900,7 +902,7 @@ def motion_correction(
         )
         logger.info(f"'fr' updated to {fr} based on file metadata")
         del mov
-    elif file_ext.lower() in ["avi", "mp4"]:
+    elif file_ext.lower() in [".avi", ".mp4"]:
         cap = cv2.VideoCapture(input_movie_files[0])
         fr = cap.get(cv2.CAP_PROP_FPS)
         parameters.change_params(params_dict={"fr": fr})
@@ -963,7 +965,7 @@ def motion_correction(
 
     logger.info(
         f"Motion corrected data written to memory-mapped file "
-        f"({os.path.basename(fname_new)}, "
+        f"({Path(fname_new).name}, "
         f"size: {get_file_size(fname_new)})"
     )
 
@@ -982,7 +984,7 @@ def motion_correction(
     )
 
     # generate CaImAn motion correction quality assessment data
-    mc_qc_filename = os.path.join(output_dir, "mc_qc_data.csv")
+    mc_qc_filename = str(Path(output_dir) / "mc_qc_data.csv")
     generate_motion_correction_quality_assessment_data(
         mc_obj=mot_correct,
         mc_qc_filename=mc_qc_filename,
@@ -1017,7 +1019,7 @@ def motion_correction(
 def source_extraction(
     *,
     # Input Files
-    input_movie_files: List[str],
+    input_movie_files: list[str],
     parameters_file: Optional[List[str]] = None,
     # Settings
     overwrite_analysis_table_params: bool = False,
@@ -1159,7 +1161,7 @@ def source_extraction(
 def spike_extraction(
     *,
     # Input Files
-    input_cellset_files: List[str],
+    input_cellset_files: list[str],
     # Spike Extraction
     bl: str = "auto",
     c1: str = "auto",
@@ -1200,7 +1202,7 @@ def spike_extraction(
     logger.info("CaImAn neural activity extraction started")
 
     # set output directory
-    output_dir = os.getcwd()
+    output_dir = str(Path.cwd())
 
     # sort input cell set chronologically
     original_input_cellset_files = input_cellset_files
@@ -1328,39 +1330,39 @@ def spike_extraction(
         # log files created
         logger.info(
             f"Denoised cell set saved "
-            f"({os.path.basename(cellset_denoised_filename)}, "
+            f"({Path(cellset_denoised_filename).name}, "
             f"size: {get_file_size(cellset_denoised_filename)})"
         )
         logger.info(
             f"Neural events saved "
-            f"({os.path.basename(eventset_filename)}, "
+            f"({Path(eventset_filename).name}, "
             f"size: {get_file_size(eventset_filename)})"
         )
 
         # generate data previews
         logger.info(
-            f"Generating cell set preview for '{os.path.basename(cellset_denoised_filename)}'"
+            f"Generating cell set preview for '{Path(cellset_denoised_filename).name}'"
         )
         try:
             generate_cell_set_previews(
                 cellset_filename=cellset_denoised_filename,
                 output_dir=output_dir,
             )
-        except Exception as e:
+        except Exception:
             logger.warning(
-                f"Cell set preview could not be generated for file {os.path.basename(cellset_denoised_filename)}"
+                f"Cell set preview could not be generated for file {Path(cellset_denoised_filename).name}"
             )
 
         logger.info(
-            f"Generating event set preview for '{os.path.basename(eventset_filename)}'"
+            f"Generating event set preview for '{Path(eventset_filename).name}'"
         )
         try:
             generate_event_set_preview(
                 eventset_filename=eventset_filename, output_dir=output_dir
             )
-        except Exception as e:
+        except Exception:
             logger.warning(
-                f"Neural events preview could not be generated for file {os.path.basename(eventset_filename)}"
+                f"Neural events preview could not be generated for file {Path(eventset_filename).name}"
             )
 
     logger.info(

@@ -1,31 +1,38 @@
-from beartype import beartype
-from beartype.typing import List, Optional, Tuple, Union
+import logging
+import math
+from pathlib import Path
+
 import caiman as cm
-from caiman.utils import visualization
 import cv2
 import imageio.v2 as iio
 import isx
-import logging
-import math
+import numpy as np
+import pandas as pd
+import seaborn as sns
+from beartype import beartype
+from beartype.typing import List, Optional, Tuple, Union
+from caiman.utils import visualization
+from ideas.plots import (
+    EventSetPreview,
+    save_footprints_preview,
+    save_neural_traces_preview,
+)
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from numpy import ndarray
-import numpy as np
-import os
-import pandas as pd
 from PIL import Image, ImageSequence
 from scipy.sparse import csc_matrix
-import seaborn as sns
-from toolbox.utils.metrics import process_xy_shifts, process_distance_matrices
+
+from toolbox.utils.metrics import process_distance_matrices, process_xy_shifts
 from toolbox.utils.plots import (
-    save_neural_traces_preview,
-    save_footprints_preview,
     EventSetPreview,
+    save_footprints_preview,
+    save_neural_traces_preview,
 )
 from toolbox.utils.utilities import (
-    get_num_cells_by_status,
-    get_file_size,
     compute_FoV_preview_figsize,
+    get_file_size,
+    get_num_cells_by_status,
 )
 
 # from typing import List
@@ -45,7 +52,7 @@ def generate_cell_set_previews(
     :param vertical_line_indices: frame indices along which to draw vertical lines
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     (
         num_accepted_cells,
@@ -55,11 +62,9 @@ def generate_cell_set_previews(
 
     if (num_accepted_cells + num_undecided_cells) > 0:
         # traces preview
-        cellset_basename = os.path.splitext(
-            os.path.basename(cellset_filename)
-        )[0]
-        output_traces_preview_filepath = (
-            os.path.join(output_dir, "traces_" + cellset_basename) + ".svg"
+        cellset_basename = Path(cellset_filename).stem
+        output_traces_preview_filepath = str(
+            Path(output_dir) / ("traces_" + cellset_basename + ".svg")
         )
         save_neural_traces_preview(
             cell_set_file=cellset_filename,
@@ -68,13 +73,13 @@ def generate_cell_set_previews(
         )
         logger.info(
             f"Cell set traces preview saved "
-            f"({os.path.basename(output_traces_preview_filepath)}, "
+            f"({Path(output_traces_preview_filepath).name}, "
             f"size: {get_file_size(output_traces_preview_filepath)})"
         )
 
         # footprints preview
-        output_footprints_preview_filepath = (
-            os.path.join(output_dir, "footprints_" + cellset_basename) + ".svg"
+        output_footprints_preview_filepath = str(
+            Path(output_dir) / ("footprints_" + cellset_basename + ".svg")
         )
         save_footprints_preview(
             cell_set_file=cellset_filename,
@@ -82,12 +87,12 @@ def generate_cell_set_previews(
         )
         logger.info(
             f"Cell set footprints preview saved "
-            f"({os.path.basename(output_footprints_preview_filepath)}, "
+            f"({Path(output_footprints_preview_filepath).name}, "
             f"size: {get_file_size(output_footprints_preview_filepath)})"
         )
     else:
         logger.warning(
-            f"There are no accepted or undecided cells. No preview will be generated for the cell set file '{os.path.basename(cellset_filename)}'"
+            f"There are no accepted or undecided cells. No preview will be generated for the cell set file '{Path(cellset_filename).name}'"
         )
 
 
@@ -98,22 +103,21 @@ def generate_event_set_preview(eventset_filename: str, output_dir: str = None):
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
-    eventset_basename = os.path.splitext(os.path.basename(eventset_filename))[
-        0
-    ]
-    output_events_preview_filepath = (
-        os.path.join(output_dir, "preview_" + eventset_basename) + ".svg"
+    eventset_basename = Path(eventset_filename).stem
+    output_events_preview_filepath = str(
+        Path(output_dir) / ("preview_" + eventset_basename + ".svg")
     )
     eventset_preview_obj = EventSetPreview(
         input_eventset_filepath=eventset_filename,
         output_svg_filepath=output_events_preview_filepath,
     )
     eventset_preview_obj.generate_preview()
+
     logger.info(
         f"Neural events preview saved "
-        f"({os.path.basename(output_events_preview_filepath)}, "
+        f"({Path(output_events_preview_filepath).name}, "
         f"size: {get_file_size(output_events_preview_filepath)})"
     )
 
@@ -331,7 +335,7 @@ def generate_movie_preview(
                 "A movie preview cannot be generated from a single frame",
             )
 
-        _, file_extension = os.path.splitext(input_filename[0].lower())
+        file_extension = Path(input_filename[0]).suffix.lower()
         if file_extension not in [".tiff", ".tif"]:
             raise ToolException(
                 ExitStatus.IDPS_ERROR_0002,
@@ -348,7 +352,7 @@ def generate_movie_preview(
         # input is a single movie file
         is_image_sequence = False
 
-        _, file_extension = os.path.splitext(input_filename.lower())
+        file_extension = Path(input_filename).suffix.lower()
         if file_extension in [".isxd", ".isxb"]:
             # Use isx API to read isxd and isxb movies
             movie = isx.Movie.read(input_filename)
@@ -576,7 +580,7 @@ def generate_movie_preview(
 
     logger.info(
         f"Movie preview saved "
-        f"({os.path.basename(preview_filename)}, "
+        f"({Path(preview_filename).name}, "
         f"size: {get_file_size(preview_filename)})"
     )
 
@@ -601,7 +605,7 @@ def generate_caiman_workflow_previews(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     # raw cell set previews
     for i in original_input_indices:
@@ -612,7 +616,7 @@ def generate_caiman_workflow_previews(
             )
         except Exception as e:
             logger.warning(
-                f"Preview could not be generated for file '{os.path.basename(cellset_raw_filenames[i])}': {str(e)}"
+                f"Preview could not be generated for file '{Path(cellset_raw_filenames[i]).name}': {e!s}"
             )
 
     # denoised cell set previews
@@ -624,7 +628,7 @@ def generate_caiman_workflow_previews(
             )
         except Exception as e:
             logger.warning(
-                f"Preview could not be generated for file '{os.path.basename(cellset_denoised_filenames[i])}': {str(e)}"
+                f"Preview could not be generated for file '{Path(cellset_denoised_filenames[i]).name}': {e!s}"
             )
 
     # event set previews
@@ -635,7 +639,7 @@ def generate_caiman_workflow_previews(
             )
         except Exception as e:
             logger.warning(
-                f"Preview could not be generated for file '{os.path.basename(eventset_filenames[i])}': {str(e)}"
+                f"Preview could not be generated for file '{Path(eventset_filenames[i]).name}': {e!s}"
             )
 
     # global cell set
@@ -659,12 +663,12 @@ def generate_caiman_workflow_previews(
         )
     except Exception as e:
         logger.warning(
-            f"Footprints and traces previews could not be generated for the CaImAn output data: {str(e)}"
+            f"Footprints and traces previews could not be generated for the CaImAn output data: {e!s}"
         )
 
     # delete global cell set file
-    if os.path.exists(global_cellset_filename):
-        os.remove(global_cellset_filename)
+    if Path(global_cellset_filename).exists():
+        Path(global_cellset_filename).unlink()
 
 
 def _plot_rigid_shifts(mc_obj, vertical_line_indices=None):
@@ -675,7 +679,7 @@ def _plot_rigid_shifts(mc_obj, vertical_line_indices=None):
     num_frames = len(mc_obj.shifts_rig)
     x_shifts_rig, y_shifts_rig = list(zip(*mc_obj.shifts_rig))
 
-    fig, ax = plt.subplots(2, 1)
+    fig, ax = plt.subplots(nrows=2)
 
     ax[0].plot(x_shifts_rig, c="#1f77b4")
     ax[0].set_ylabel("x shift (pixels)")
@@ -708,7 +712,7 @@ def _plot_piecewise_rigid_shifts(mc_obj, vertical_line_indices=None):
     :param mc_obj: CaImAn motion correction object
     """
     num_frames = len(mc_obj.shifts_rig)
-    fig, ax = plt.subplots(2, 1)
+    fig, ax = plt.subplots(nrows=2)
 
     ax[0].plot(mc_obj.x_shifts_els)
     ax[0].set_ylabel("x shift (pixels)")
@@ -755,20 +759,18 @@ def generate_caiman_motion_corrected_previews(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     # movie previews
     for i in original_input_indices:
         try:
-            movie_basename = os.path.splitext(
-                os.path.basename(mc_movie_filenames[i])
-            )[0]
-            preview_filename = os.path.join(
-                output_dir, f"preview_{movie_basename}.mp4"
+            movie_basename = Path(mc_movie_filenames[i]).stem
+            preview_filename = str(
+                Path(output_dir) / f"preview_{movie_basename}.mp4"
             )
 
-            file_ext = os.path.splitext(mc_movie_filenames[0])[1][1:]
-            if file_ext.lower() in ["tiff", "tif"]:
+            file_ext = Path(mc_movie_filenames[0]).suffix.lower()
+            if file_ext.lower() in [".tiff", ".tif"]:
                 generate_movie_preview(
                     input_filename=mc_movie_filenames[i],
                     preview_filename=preview_filename,
@@ -781,7 +783,7 @@ def generate_caiman_motion_corrected_previews(
                 )
         except Exception as e:
             logger.warning(
-                f"Preview could not be generated for file '{os.path.basename(mc_movie_filenames[i])}': {str(e)}"
+                f"Preview could not be generated for file '{Path(mc_movie_filenames[i]).name}': {e!s}"
             )
             logger.exception(e)
 
@@ -810,7 +812,7 @@ def generate_initialization_images_preview(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     try:
         logger.info("Generating pnr, correlation, and search images")
@@ -820,7 +822,7 @@ def generate_initialization_images_preview(
         )
         search_image = correlation_image * pnr_image
 
-        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4))
+        fig, ax = plt.subplots(ncols=3, figsize=(12, 4))
 
         # PNR image
         pnr_plot_img = ax[0].imshow(pnr_image)
@@ -847,14 +849,14 @@ def generate_initialization_images_preview(
 
         fig.tight_layout()
         fig.savefig(
-            os.path.join(output_dir, "initialization_images.svg"),
+            str(Path(output_dir) / "initialization_images.svg"),
             bbox_inches="tight",
             dpi=300,
         )
         plt.close(fig)
     except Exception as e:
         logger.warning(
-            f"Initialization images (pnr, correlation, search) could not be generated: {str(e)}"
+            f"Initialization images (pnr, correlation, search) could not be generated: {e!s}"
         )
         correlation_image = None
 
@@ -870,22 +872,23 @@ def generate_local_correlation_image_preview(
     :param output_dir: path to the output directory
     """
     if output_dir is None:
-        output_dir = os.getcwd()
+        output_dir = str(Path.cwd())
 
     try:
         logger.info("Generating correlation image preview")
 
-        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        fig, ax = plt.subplots(figsize=(6, 6))
         ax.imshow(correlation_image, cmap="gray")
         ax.axis("off")
         fig.tight_layout()
-        plt.savefig(
+        fig.savefig(
             "local_corr_img_preview.png", bbox_inches="tight", pad_inches=0.1
         )
+        plt.close(fig)
 
     except Exception as e:
         logger.warning(
-            f"Correlation image preview could not be generated: {str(e)}"
+            f"Correlation image preview could not be generated: {e!s}"
         )
 
 
@@ -913,6 +916,7 @@ def create_CaImAn_MSR_preview_figures(
     ticks_step: int,
     n_sample_cells: int,
     output_dir: str,
+    rec_to_sess_lookup: Optional[dict[int, int]] = None,
 ) -> None:
     """
     Create preview figures for all output files of CaImAn Multi-Session Registration.
@@ -992,12 +996,14 @@ def create_CaImAn_MSR_preview_figures(
         cs_out_paths=cs_out_paths,
         n_sample_cells=n_sample_cells,
         output_dir=output_dir,
+        rec_to_sess_lookup=rec_to_sess_lookup,
     )
 
     # Plot rasters from registered eventsets
     create_registered_eventsets_rasters_preview_figure(
         es_out_paths=es_out_paths,
         output_dir=output_dir,
+        rec_to_sess_lookup=rec_to_sess_lookup,
     )
 
     # Plot IDEAS canonical preview figures for registered cellsets
@@ -1046,8 +1052,8 @@ def create_alignment_preview_figure(
     )
 
     fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
+        nrows=n_rows,
+        ncols=n_cols,
         figsize=figsize,
         sharex=True,
         sharey=True,
@@ -1105,11 +1111,12 @@ def create_alignment_preview_figure(
 
     fig.tight_layout()
     preview_fname = "preview_template_images_alignment.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1161,7 +1168,7 @@ def create_registered_cells_on_unified_image_preview_figure(
         figsize_gain=8,
     )
 
-    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(
         template.T,
         vmin=np.percentile(template, vmin),
@@ -1246,11 +1253,12 @@ def create_registered_cells_on_unified_image_preview_figure(
     ax.set_ylabel("y (px)")
     fig.tight_layout()
     preview_fname = "preview_registered_cells_on_unified_image.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1297,8 +1305,8 @@ def create_registered_cells_on_each_session_image_preview_figure(
     )
 
     fig, axes = plt.subplots(
-        n_rows,
-        n_cols,
+        nrows=n_rows,
+        ncols=n_cols,
         figsize=figsize,
         sharex=True,
         sharey=True,
@@ -1388,11 +1396,12 @@ def create_registered_cells_on_each_session_image_preview_figure(
             ax.remove()
     fig.tight_layout()
     preview_fname = "preview_registered_cells_on_proj_images.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1436,7 +1445,7 @@ def create_registered_yield_stacked_bars_preview_figure(
         for x in range(n_sessions)
     ]
 
-    fig, ax = plt.subplots(1, 1, figsize=(n_sessions * 2.5, 4))
+    fig, ax = plt.subplots(figsize=(n_sessions * 2.5, 4))
     df.plot(ax=ax, x="session", kind="bar", stacked=True, color=colors_dict)
     ax.set_xticklabels(labels=range(1, n_sessions + 1), rotation=0)
     ax.set_ylabel("number of cells")
@@ -1449,11 +1458,12 @@ def create_registered_yield_stacked_bars_preview_figure(
     ax.spines[["right", "top"]].set_visible(False)
     fig.tight_layout()
     preview_fname = "preview_number_registered_cells_stacked_bars.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1509,7 +1519,7 @@ def create_distance_matrices_histograms_preview_figure(
     xlabels = ["centroid distance (px)", "overlap (Jaccard Index)"]
     xlims = [(0, max_dist * 4), (0, 1)]
 
-    fig, axes = plt.subplots(2, 1, figsize=(6, 6))
+    fig, axes = plt.subplots(nrows=2, figsize=(6, 6))
     for ax, df, x, xlim, xlabel in zip(axes, [df_1, df_2], xs, xlims, xlabels):
         binwidth = np.abs(np.diff(xlim)[0]) / 20
         sns.histplot(
@@ -1527,11 +1537,12 @@ def create_distance_matrices_histograms_preview_figure(
         ax.set_xlabel(xlabel)
     fig.tight_layout()
     preview_fname = "preview_distance_overlap_histograms.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1542,11 +1553,16 @@ def create_sample_registered_traces_preview_figure(
     cs_out_paths: List[str],
     n_sample_cells: int,
     output_dir: str,
+    rec_to_sess_lookup: Optional[dict[int, int]] = None,
 ) -> None:
     """
     Plot sample traces from registered cells.
     """
-    n_sessions = len(cs_out_paths)
+    n_recs = len(cs_out_paths)
+    if rec_to_sess_lookup is None:
+        n_sessions = n_recs
+    else:
+        n_sessions = len(set(rec_to_sess_lookup.values()))
 
     df_assignments_all = df_assignments.query(
         "n_reg_sess == @n_sessions"
@@ -1585,23 +1601,22 @@ def create_sample_registered_traces_preview_figure(
         )
     )
 
-    range_mat = np.zeros((n_reg_cells_all, n_sessions))
-    for idx_sess in range(n_sessions):
-        cs = isx.CellSet.read(cs_out_paths[idx_sess])
+    range_mat = np.zeros((n_reg_cells_all, n_recs))
+    for idx_rec in range(n_recs):
+        cs = isx.CellSet.read(cs_out_paths[idx_rec])
         for offset, idx in enumerate(idx_cells):
             y = cs.get_cell_trace_data(idx)
-            range_mat[offset, idx_sess] = np.max(y) - np.min(y)
+            range_mat[offset, idx_rec] = np.max(y) - np.min(y)
 
     fig, axes = plt.subplots(
-        1,
-        n_sessions,
-        figsize=(n_sessions * 4, 8),
+        ncols=n_recs,
+        figsize=(n_recs * 4, 8),
         sharey=True,
         width_ratios=L_list,
     )
-    for idx_sess in range(n_sessions):
-        ax = axes[idx_sess]
-        cs = isx.CellSet.read(cs_out_paths[idx_sess])
+    for idx_rec in range(n_recs):
+        ax = axes[idx_rec]
+        cs = isx.CellSet.read(cs_out_paths[idx_rec])
         L = cs.timing.num_samples
         fs = 1 / cs.timing.period.secs_float
         tb_tmp = np.linspace(0, (L - 1) / fs, L)
@@ -1615,18 +1630,37 @@ def create_sample_registered_traces_preview_figure(
         ax.set_ylim((-0.5, len(idx_cells) + 0.5))
         ax.set_xlim((tb_tmp[0], tb_tmp[-1]))
         ax.spines[["right", "top"]].set_visible(False)
-        ax.set_title(f"session #{idx_sess + 1}")
+        # if series are provided, display both the session index and the
+        # recording index (within session)
+        if rec_to_sess_lookup is not None:
+            sess_idx = rec_to_sess_lookup[idx_rec]
+            rec_order = [
+                rec if sess == sess_idx else np.nan
+                for rec, sess in rec_to_sess_lookup.items()
+            ]
+            rec_order -= np.nanmin(rec_order)
+            if np.sum(~np.isnan(rec_order)) == 1:
+                title_str = f"session #{sess_idx + 1}"
+            else:
+                sess_rec_idx = int(rec_order[idx_rec])
+                title_str = (
+                    f"session #{sess_idx + 1}\nrecording #{sess_rec_idx + 1}"
+                )
+        else:
+            title_str = f"session #{idx_rec + 1}"
+        ax.set_title(title_str)
         ax.set_yticks(np.arange(0, len(idx_cells), ystep), labels=idx_cells)
-        if idx_sess == 0:
+        if idx_rec == 0:
             ax.set_xlabel(f"time ({time_str})")
             ax.set_ylabel("cell index")
     fig.tight_layout()
     preview_fname = "preview_registered_traces.svg"
-    plt.savefig(
-        os.path.join(output_dir, preview_fname),
+    fig.savefig(
+        str(Path(output_dir) / preview_fname),
         bbox_inches="tight",
         pad_inches=0.1,
     )
+    plt.close(fig)
     logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1635,6 +1669,7 @@ def create_registered_eventsets_rasters_preview_figure(
     *,
     es_out_paths: List[Optional[str]],
     output_dir: str,
+    rec_to_sess_lookup: Optional[dict[int, int]] = None,
 ) -> None:
     """
     Plot rasters from registered eventsets.
@@ -1645,7 +1680,7 @@ def create_registered_eventsets_rasters_preview_figure(
         vmin_perc = 0
         vmax_perc = 99
 
-        n_sessions = len(es_out_paths)
+        n_recs = len(es_out_paths)
 
         L_list = []
         n_reg_list = []
@@ -1667,19 +1702,18 @@ def create_registered_eventsets_rasters_preview_figure(
             time_str = "s"
 
         fig, axes = plt.subplots(
-            1,
-            n_sessions,
+            ncols=n_recs,
             figsize=(
-                n_sessions * 4,
+                n_recs * 4,
                 np.max((5 * np.max(n_reg_list) / 100, 4)),
             ),
             sharey=True,
             width_ratios=L_list,
         )
-        for idx_sess, n_reg_cells in enumerate(n_reg_list):
-            ax = axes[idx_sess]
-            es = isx.EventSet.read(es_out_paths[idx_sess])
-            L = es.timing.num_samples
+        for idx_rec, n_reg_cells in enumerate(n_reg_list):
+            ax = axes[idx_rec]
+            es = isx.EventSet.read(es_out_paths[idx_rec])
+            L = L_list[idx_rec]
             fs = 1 / es.timing.period.secs_float
             tb_tmp = np.linspace(0, (L - 1) / fs, L)
             if time_in_min:
@@ -1697,7 +1731,7 @@ def create_registered_eventsets_rasters_preview_figure(
                         np.abs(tb_tmp - (offsets / 1e6).reshape(-1, 1)), axis=1
                     )
                 event_mat[idx, offsets_idx] = amplitudes
-            if idx_sess == 0:
+            if idx_rec == 0:
                 vmin = np.percentile(event_mat, vmin_perc)
                 vmax = np.percentile(event_mat, vmax_perc)
                 while vmax == vmin and vmax_perc <= 100:
@@ -1719,17 +1753,34 @@ def create_registered_eventsets_rasters_preview_figure(
                 xticks = np.array(xticklabels * fs, dtype=int)
             ax.set_xticks(xticks, labels=xticklabels)
             ax.spines[["right", "top"]].set_visible(False)
-            ax.set_title(f"session #{idx_sess + 1}")
-            if idx_sess == 0:
+            # if series are provided, display both the session index and the
+            # recording index (within session)
+            if rec_to_sess_lookup is not None:
+                sess_idx = rec_to_sess_lookup[idx_rec]
+                rec_order = [
+                    rec if sess == sess_idx else np.nan
+                    for rec, sess in rec_to_sess_lookup.items()
+                ]
+                rec_order -= np.nanmin(rec_order)
+                if np.sum(~np.isnan(rec_order)) == 1:
+                    title_str = f"session #{sess_idx + 1}"
+                else:
+                    sess_rec_idx = int(rec_order[idx_rec])
+                    title_str = f"session #{sess_idx + 1}\nrecording #{sess_rec_idx + 1}"
+            else:
+                title_str = f"session #{idx_rec + 1}"
+            ax.set_title(title_str)
+            if idx_rec == 0:
                 ax.set_xlabel(f"time ({time_str})")
                 ax.set_ylabel("cell index")
         fig.tight_layout()
         preview_fname = "preview_registered_events.svg"
-        plt.savefig(
-            os.path.join(output_dir, preview_fname),
+        fig.savefig(
+            str(Path(output_dir) / preview_fname),
             bbox_inches="tight",
             pad_inches=0.1,
         )
+        plt.close(fig)
         logger.info(f"Saved preview figure {preview_fname}")
 
 
@@ -1745,11 +1796,11 @@ def create_cellset_preview_figures(
     changes] Generate standard IDEAS traces and footprints previews for a
     single cell set file.
     """
-    cs_basename = os.path.splitext(os.path.basename(cs_path))[0]
+    cs_basename = Path(cs_path).stem
 
     # preview footprints
     preview_fname = f"preview_footprints_{cs_basename}.svg"
-    preview_footprints_path = os.path.join(output_dir, preview_fname)
+    preview_footprints_path = str(Path(output_dir) / preview_fname)
     save_footprints_preview(
         cell_set_file=cs_path,
         output_preview_filename=preview_footprints_path,
@@ -1757,7 +1808,7 @@ def create_cellset_preview_figures(
 
     # preview traces
     preview_fname = f"preview_traces_{cs_basename}.svg"
-    preview_traces_path = os.path.join(output_dir, preview_fname)
+    preview_traces_path = str(Path(output_dir) / preview_fname)
     save_neural_traces_preview(
         cell_set_file=cs_path,
         output_preview_filename=preview_traces_path,
@@ -1776,11 +1827,11 @@ def create_eventset_preview_figures(
     improvements] Generate standard IDEAS previews for a single event set
     file.
     """
-    es_basename = os.path.splitext(os.path.basename(es_path))[0]
+    es_basename = Path(es_path).stem
 
     # preview neural events
     preview_fname = f"preview_{es_basename}.svg"
-    preview_events_path = os.path.join(output_dir, preview_fname)
+    preview_events_path = str(Path(output_dir) / preview_fname)
     es_preview_obj = EventSetPreview(
         input_eventset_filepath=es_path,
         output_svg_filepath=preview_events_path,

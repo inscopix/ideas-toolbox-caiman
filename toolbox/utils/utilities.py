@@ -1,15 +1,19 @@
-from beartype import beartype
-from beartype.typing import List, Optional, Tuple, Union
-import isx
 import json
 import logging
-from numpy import ndarray
-import numpy as np
-import pandas as pd
 import os
 import struct
+from itertools import groupby
+from pathlib import Path
+
+import isx
+import numpy as np
+import pandas as pd
+import pylcs
+from beartype import beartype
+from beartype.typing import List, Optional, Tuple, Union
+from numpy import ndarray
+
 from toolbox.utils.exceptions import IdeasError
-from typing import List
 
 logger = logging.getLogger()
 
@@ -20,7 +24,7 @@ def read_isxc_metadata(input_filename):
     :param input_filename: path to the input file (.isxc)
     :return: metadata of the isxc file
     """
-    _, file_extension = os.path.splitext(input_filename)
+    file_extension = Path(input_filename).suffix
     if file_extension.lower() != ".isxc":
         raise IdeasError("Metadata can only be extracted from isxc files")
 
@@ -67,7 +71,7 @@ def read_isxd_metadata(input_filename):
     :param input_filename: path to the input file (.isxd)
     :return: metadata of the isxd file
     """
-    _, file_extension = os.path.splitext(input_filename)
+    file_extension = Path(input_filename).suffix
     if file_extension.lower() != ".isxd":
         raise IdeasError("Metadata can only be extracted from isxd files")
 
@@ -253,18 +257,18 @@ def get_file_size(file_path: str) -> str:
 
     :param file_path: path to the input file
     """
-    file_size = abs(os.path.getsize(file_path))
+    file_size = abs(Path(file_path).stat().st_size)
     for unit_prefix in ["", "K", "M", "G", "T", "P", "E", "Z", "Y"]:
         if file_size < 1024.0:
             return f"{file_size:.2f} {unit_prefix}B"
         file_size /= 1024.0
-    return f"{os.path.getsize(file_path)} B"
+    return f"{Path(file_path).stat().st_size} B"
 
 
 def check_file_exists(file: str) -> None:
     """check if a file exists, fail if not"""
 
-    if not os.path.exists(file):
+    if not Path(file).exists():
         raise Exception(f"{file} does not exist.")
 
 
@@ -276,7 +280,7 @@ def check_file_extention_is(
     """small util func to check the extention of a file
     and fail otherwise"""
 
-    _, ext_ = os.path.splitext(os.path.basename(file_name))
+    ext_ = Path(file_name).suffix
     if ext_.lower() != ext:
         raise Exception(
             f"{file_name} does not have the extension: {ext}. It instead has {ext_}"
@@ -494,10 +498,17 @@ def validate_caiman_msr_inputs(
     cellset_paths: List[str],
     template_paths: List[str],
     eventset_paths: Optional[List[str]],
+    contains_series: bool,
     enclosed_thr: Optional[Union[float, int]],
     use_cell_status: str,
     min_n_regist_sess: int,
-) -> Tuple[List[Optional[str]], Optional[Union[float, int]], int]:
+) -> Tuple[
+    List[str],
+    List[Optional[str]],
+    Optional[Union[float, int]],
+    int,
+    Optional[dict[int, int]],
+]:
     """
     Validate CaImAn Multi-Session Registration input files and parameters.
     """
@@ -508,11 +519,10 @@ def validate_caiman_msr_inputs(
         "corresponding template images as input of this tool."
     )
 
-    # # ensure there are as many template images as there are cellsets
-    assert len(cellset_paths) == len(template_paths), (
-        f"There were {len(cellset_paths)} cellsets and "
-        f"{len(template_paths)} template images. Please provide as many "
-        "template images as cellsets."
+    # # ensure there are at least 2 template images
+    assert len(template_paths) > 1, (
+        "Only 1 template image was provided. Please provide at least 2 "
+        "template images and corresponding cellsets as input of this tool."
     )
 
     # # ensure there are as many eventsets, if provided, as there are cellsets
@@ -528,6 +538,29 @@ def validate_caiman_msr_inputs(
         )
     else:
         eventset_paths = [None] * len(cellset_paths)
+
+    if contains_series:
+        # # if series are provided as input, compute a lookup table linking
+        # # cellsets part of a series to their corresponding template image,
+        # # based on filename distance
+        rec_to_sess_lookup = match_templates_with_cellsets(
+            cellset_paths=cellset_paths,
+            template_paths=template_paths,
+        )
+        # # isolate the first cellset of each series for MSR computation
+        cellset_paths = get_first_cellset_of_series(
+            cellset_paths=cellset_paths,
+            rec_to_sess_lookup=rec_to_sess_lookup,
+        )
+    else:
+        # # ensure there are as many template images as there are cellsets
+        assert len(cellset_paths) == len(template_paths), (
+            f"There were {len(cellset_paths)} cellsets and "
+            f"{len(template_paths)} template images. Please provide as many "
+            "template images as cellsets or, if providing cellset series, "
+            "please set `Has Series` to True."
+        )
+        rec_to_sess_lookup = None
 
     # validate parameters
     # 1. ensure type of `enclosed_thr`
@@ -551,7 +584,13 @@ def validate_caiman_msr_inputs(
         )
         min_n_regist_sess = len(cellset_paths)
 
-    return eventset_paths, enclosed_thr, min_n_regist_sess
+    return (
+        cellset_paths,
+        eventset_paths,
+        enclosed_thr,
+        min_n_regist_sess,
+        rec_to_sess_lookup,
+    )
 
 
 @beartype
@@ -648,3 +687,211 @@ def compute_FoV_preview_figsize(
     figsize = tuple([x * figsize_gain for x in figsize_relative])
 
     return figsize
+
+
+@beartype
+def match_templates_with_cellsets(
+    *,
+    cellset_paths: List[str],
+    template_paths: List[str],
+) -> dict[int, int]:
+    """
+    Match template files with cellset files based on
+    a mix of string comparison approaches.
+    """
+    cellset_to_template_idx = []
+    expanded_template_paths = []
+    for cs in cellset_paths:
+        # compute distance metrics between filenames
+        first_n_dist = [
+            find_n_common_starting_characters(s1=cs, s2=x)
+            for x in template_paths
+        ]
+
+        n_common_seq = [
+            find_n_common_sequences(s1=cs, s2=x) for x in template_paths
+        ]
+
+        total_len_common_seq = [
+            find_total_length_common_sequences(s1=cs, s2=x)
+            for x in template_paths
+        ]
+
+        longest_common_seq = pylcs.lcs_sequence_of_list(cs, template_paths)
+
+        edit_dist = pylcs.levenshtein_distance_of_list(cs, template_paths)
+
+        # get index of best match for each metric, only if they are helpful
+        # to differentiate between potential matches
+        idx_template_all = []
+        log_str_list = []
+        if len(np.unique(first_n_dist)) > 1:
+            idx_template_all.append(np.argmax(first_n_dist))
+            log_str = (
+                "'first N common characters' matches it "
+                "with template image #"
+                f"{idx_template_all[-1]}:\t\t"
+                f"{template_paths[idx_template_all[-1]]},\n"
+            )
+            log_str_list.append(log_str)
+
+        if len(np.unique(n_common_seq)) > 1:
+            idx_template_all.append(np.argmax(n_common_seq))
+            log_str = (
+                "'number of common sequences' matches it "
+                "with template image #"
+                f"{idx_template_all[-1]}:\t\t"
+                f"{template_paths[idx_template_all[-1]]},\n"
+            )
+            log_str_list.append(log_str)
+
+        if len(np.unique(total_len_common_seq)) > 1:
+            idx_template_all.append(np.argmax(total_len_common_seq))
+            log_str = (
+                "'total length of common sequences' matches it "
+                "with template image #"
+                f"{idx_template_all[-1]}:\t"
+                f"{template_paths[idx_template_all[-1]]},\n"
+            )
+            log_str_list.append(log_str)
+
+        if len(np.unique(longest_common_seq)) > 1:
+            idx_template_all.append(np.argmax(longest_common_seq))
+            log_str = (
+                "'longest common sequence' matches it "
+                "with template image #"
+                f"{idx_template_all[-1]}:\t\t"
+                f"{template_paths[idx_template_all[-1]]},\n"
+            )
+            log_str_list.append(log_str)
+
+        if len(np.unique(edit_dist)) > 1:
+            idx_template_all.append(np.argmin(edit_dist))
+            log_str = (
+                "'Levenshtein (edit distance)' matches it "
+                "with template image #"
+                f"{idx_template_all[-1]}:\t"
+                f"{template_paths[idx_template_all[-1]]},\n"
+            )
+            log_str_list.append(log_str)
+
+        # verbose if no unanimous index
+        if len(np.unique(idx_template_all)) > 1:
+            log_str = (
+                "".join(log_str_list[:-1]) + f"and {log_str_list[-1][:-2]}"
+            )
+            logger.warning(
+                f"For cellset {cs},\n{log_str}.\nPlease double check proper "
+                "matching and if not as expected, please rename input files "
+                "to make template image names closer to cellset names from "
+                "its related series.\n"
+            )
+
+        # get index based on metrics consensus
+        idx_template = int(np.median(idx_template_all))
+        cellset_to_template_idx.append(idx_template)
+        expanded_template_paths.append(template_paths[idx_template])
+
+    # verbose the found matchings in the log to enable user to validate them
+    cs_temp_matchings = [
+        f"{Path(cs).name}\t->\t{Path(temp).name}"
+        for cs, temp in zip(cellset_paths, expanded_template_paths)
+    ]
+    logger.warning(
+        f"Guessed the following matchings for the {len(cellset_paths)} "
+        f"cellsets and {len(template_paths)} template images provided as "
+        "input:"
+    )
+    [logger.warning(x) for x in cs_temp_matchings]
+    logger.warning(
+        "If these matchings are incorrect, please rename input cellsets and "
+        "template image from each series in a more homogeneous way and retry."
+    )
+
+    # create a lookup table linking recordings (input cellsets part of
+    # a series) to sessions (corresponding input template images)
+    rec_to_sess_lookup = dict(
+        zip(
+            range(len(cellset_to_template_idx)),
+            cellset_to_template_idx,
+        )
+    )
+
+    return rec_to_sess_lookup
+
+
+@beartype
+def get_first_cellset_of_series(
+    cellset_paths: List[str],
+    rec_to_sess_lookup: dict[int, int],
+) -> List[str]:
+    """
+    Get the first cellset of each series.
+    """
+    idx_sessions = np.unique(list(rec_to_sess_lookup.values()))
+    cellset_paths_out = []
+    for idx_session in idx_sessions:
+        idx = next(
+            (
+                key
+                for key, val in rec_to_sess_lookup.items()
+                if val == idx_session
+            )
+        )
+        cellset_paths_out.append(cellset_paths[idx])
+    return cellset_paths_out
+
+
+@beartype
+def find_n_common_starting_characters(
+    *,
+    s1: str,
+    s2: str,
+) -> int:
+    """
+    Find the number of starting characters in common between 2 strings.
+    """
+    idx = 1
+    while s1[:idx] == s2[:idx]:
+        idx += 1
+
+    return idx - 1
+
+
+@beartype
+def find_n_common_sequences(
+    *,
+    s1: str,
+    s2: str,
+) -> int:
+    """
+    Find the number of common character sequences between 2 strings."""
+    s1_elems = s1.replace("-", "_").split("_")
+    s2_elems = s2.replace("-", "_").split("_")
+
+    counter = 0
+    for s1_elem in s1_elems:
+        if s1_elem in s2_elems:
+            counter += 1
+
+    return counter
+
+
+@beartype
+def find_total_length_common_sequences(
+    *,
+    s1: str,
+    s2: str,
+    min_seq_len: int = 3,
+) -> int:
+    """
+    Find the total length of common character sequences between 2 strings."""
+    match_list = pylcs.lcs_sequence_idx(s1, s2)
+    seqs = list(
+        list(g) for k, g in groupby(match_list, key=lambda x: x != -1) if k
+    )
+    seqs_len = np.array([len(x) for x in seqs])
+
+    total_len = int(np.sum(seqs_len[seqs_len >= min_seq_len]))
+
+    return total_len

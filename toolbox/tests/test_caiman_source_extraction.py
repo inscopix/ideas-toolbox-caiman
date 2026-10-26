@@ -1,13 +1,14 @@
 import os
 import shutil
-import pytest
+
 import isx
 import numpy as np
-from toolbox.tools.caiman_isx_academic import source_extraction
+import pytest
 from caiman.source_extraction.cnmf.cnmf import load_CNMF
+
+from toolbox.tools.caiman_isx_academic import source_extraction
 from toolbox.utils.exceptions import IdeasError
 from toolbox.utils.utilities import read_isxd_metadata
-
 
 DATA_DIR = "/ideas/data"
 
@@ -437,9 +438,14 @@ def test_caiman_source_extraction_single_avi_movie():
     # validate CaImAn output
     model_file = os.path.join(output_dir, "caiman_output.hdf5")
     model = load_CNMF(model_file)
-    exp_num_cells = 50
+    # Computational Riddle!
+    # Depending on the host machine, small floating point differences result in
+    # compounding differences that can yield small differences in the number of cells detected.
+    # This is most likely due to differences in underlying linear algebra libraries on the host
+    # linked to the docker container, e.g., OpenBLAS vs MKL vs Apple veclib
+    exp_num_cells = [50, 51]
     act_num_cells = len(model.estimates.C)
-    assert act_num_cells == exp_num_cells
+    assert act_num_cells in exp_num_cells
     assert model.estimates.idx_components is None
     assert model.estimates.idx_components_bad is None
 
@@ -456,7 +462,7 @@ def test_caiman_source_extraction_single_avi_movie():
     exp_spacing = isx.Spacing(num_pixels=(exp_height, exp_width))
 
     raw_cellset = isx.CellSet.read("cellset_raw.000.isxd")
-    assert raw_cellset.num_cells == exp_num_cells
+    assert raw_cellset.num_cells in exp_num_cells
     assert raw_cellset.timing.num_samples == exp_num_frames
     assert raw_cellset.spacing.num_pixels[0] == exp_height
     assert raw_cellset.spacing.num_pixels[1] == exp_width
@@ -470,7 +476,7 @@ def test_caiman_source_extraction_single_avi_movie():
     assert exp_spacing == raw_cellset.spacing
 
     denoised_cellset = isx.CellSet.read("cellset_denoised.000.isxd")
-    assert denoised_cellset.num_cells == exp_num_cells
+    assert denoised_cellset.num_cells in exp_num_cells
     assert denoised_cellset.timing.num_samples == exp_num_frames
     assert denoised_cellset.spacing.num_pixels[0] == exp_height
     assert denoised_cellset.spacing.num_pixels[1] == exp_width
@@ -487,7 +493,7 @@ def test_caiman_source_extraction_single_avi_movie():
     assert exp_spacing == denoised_cellset.spacing
 
     eventset = isx.EventSet.read("neural_events.000.isxd")
-    assert eventset.num_cells == exp_num_cells
+    assert eventset.num_cells in exp_num_cells
     assert eventset.timing.num_samples == exp_num_frames
     assert eventset.get_cell_name(0) == exp_cell0_name
     assert eventset.get_cell_name(3) == exp_cell3_name

@@ -2695,7 +2695,7 @@
             "name": "CaImAn Multi-Session Registration",
             "key": "caiman_msr__caiman_msr",
             "help": "Perform CaImAn Multi-Session Registration (MSR) on a set of cellsets and related template images.",
-            "version": "1.1.0",
+            "version": "2.0.0",
             "maturity": "production",
             "visibility": "public",
             "toolkit": "Calcium Imaging Processing",
@@ -2793,7 +2793,7 @@
                     "name": "(optional) Eventsets",
                     "required": false,
                     "hidden": false,
-                    "help": "(optional) Eventsets containing the neural events for outputting registered eventsets. If Cellsets were provided as .h5/.hdf5, then they already contain Eventsets. [.isxd]",
+                    "help": "(optional) Eventsets containing the neural events for outputting registered eventsets. If cellsets were provided as .h5/.hdf5, then they already contain Eventsets. [.isxd]",
                     "type": {
                         "is_source": true,
                         "param_type": "ToolPathParam",
@@ -2815,6 +2815,23 @@
                             }
                         ]
                     }
+                },
+                {
+                    "key": "contains_series",
+                    "name": "Contains Series",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Indicate whether at least some of the input cellsets and optional eventsets are series. If True, cellsets will be matched to template images based on filename. [bool]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolBooleanParam",
+                        "param_datatype": "boolean",
+                        "display": {
+                            "group": "Input Files",
+                            "group_order": 3
+                        }
+                    },
+                    "default": false
                 },
                 {
                     "key": "align_flag",
@@ -2966,7 +2983,7 @@
                         ],
                         "choices_display": ""
                     },
-                    "default": "accepted"
+                    "default": "accepted & undecided"
                 },
                 {
                     "key": "min_n_regist_sess",
@@ -2985,6 +3002,56 @@
                         "min": 1
                     },
                     "default": 1
+                },
+                {
+                    "key": "padding_anchor",
+                    "name": "Padding Anchor Corner",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Corner used to anchor each session when padding FoV dimensions. Padding is added on the opposite sides to reach the largest FoV across sessions. Set to \"disabled\" to fail when FoV dimensions differ across sessions (legacy behavior). Must be one of \"disabled\", \"top-left\", \"top-right\", \"bottom-left\", or \"bottom-right\". [str]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolChoiceParam",
+                        "param_datatype": "string",
+                        "display": {
+                            "group": "FoV Padding",
+                            "group_order": 0
+                        },
+                        "choices": [
+                            "disabled",
+                            "top-left",
+                            "top-right",
+                            "bottom-left",
+                            "bottom-right"
+                        ],
+                        "display_options": [
+                            "disabled",
+                            "top-left",
+                            "top-right",
+                            "bottom-left",
+                            "bottom-right"
+                        ],
+                        "choices_display": ""
+                    },
+                    "default": "disabled"
+                },
+                {
+                    "key": "padding_tolerance",
+                    "name": "Padding Tolerance (px)",
+                    "required": false,
+                    "hidden": false,
+                    "help": "Maximum allowed FoV padding in pixels along each axis when cross-session harmonization is enabled. If required padding exceeds this value, the tool raises an error. [int]",
+                    "type": {
+                        "is_source": false,
+                        "param_type": "ToolIntRangeParam",
+                        "param_datatype": "integer",
+                        "display": {
+                            "group": "FoV Padding",
+                            "group_order": 1
+                        },
+                        "min": 0
+                    },
+                    "default": 10
                 },
                 {
                     "key": "fp_thr_method",
