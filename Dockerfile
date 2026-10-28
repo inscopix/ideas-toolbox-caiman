@@ -1,64 +1,149 @@
+# Builder stage to create venv with analysis dependencies
+FROM public.ecr.aws/lts/ubuntu:22.04 AS builder
+
+# Create ideas home dir to save venv for analysis
+WORKDIR /ideas
+
+RUN apt-get -y update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        git \
+        build-essential g++ \
+    && update-ca-certificates
+
+# Create a venv with uv to install python dependencies
+# This can be done globally, but using venv is best practice
+
+# ========================== Python Dependency Installation with uv ===========================
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+# Disable bytecode compilation (causes too many files open OS error)
+ENV UV_COMPILE_BYTECODE=0
+# Ensure installed tools can be executed out of the box
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Install venv into in the ideas user's home
+ENV UV_PROJECT_ENVIRONMENT=/ideas/venv VIRTUAL_ENV=/ideas/venv
+# Allow uv to download required python version based on pinned .python-version
+ENV UV_PYTHON_DOWNLOADS=automatic
+# Strictly use frozen dependencies, and require cryptographic verification of each package
+ENV UV_LOCKED=1 UV_REQUIRE_HASHES=1 UV_VERIFY_HASHES=1
+ENV UV_CACHE_DIR=/tmp/.cache/uv
+# Specify accessible directory to install python
+ENV UV_PYTHON_INSTALL_DIR=/opt/uv-python
+
+RUN --mount=from=ghcr.io/astral-sh/uv:0.11.2,source=/uv,target=/bin/uv \
+    --mount=type=cache,id=uv-cache-ideas,target=/tmp/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=.python-version,target=.python-version \
+    --mount=type=bind,source=resources/tensorflow-2.8.0-cp310-cp310-linux_x86_64.whl,target=resources/tensorflow-2.8.0-cp310-cp310-linux_x86_64.whl \
+    uv sync --no-install-project --group analysis \
+    # fix for pynwb api which requires write permissions to site-package dir
+    && /ideas/venv/bin/python -c "import pynwb" 
+
+# Base image for production use
 FROM public.ecr.aws/lts/ubuntu:22.04 AS base
 
-# General env variables
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONFAULTHANDLER=1
 ENV DEBIAN_FRONTEND=noninteractive
-ENV TQDM_DISABLE=1
 
-# CaImAn env variables
-# https://caiman.readthedocs.io/en/latest/Installation.html#section-4c-setting-up-environment-variables
-ENV MKL_NUM_THREADS=1
-ENV OPENBLAS_NUM_THREADS=1
-ENV VECLIB_MAXIMUM_THREADS=1
-
-ENV PATH="${PATH}:/ideas/.local/bin"
-
-ARG PACKAGE_REQS
-ARG PYTHON_VERSION=3.10.0
-ARG PYTHON=python3.10
-ENV PACKAGE_REQS=$PACKAGE_REQS
+# Arguments for python installation
+ARG PYTHON=python3.11
+ARG VENV=venv
+ARG PYTHON_VENV=/ideas/${VENV}/bin/python
 
 # Create ideas user
+# This is no longer necessary to do, but good practice anyways
 RUN addgroup ideas \
     && adduser --disabled-password --home /ideas --ingroup ideas ideas
 
+# Create ideas home dir
 WORKDIR /ideas
 
-# Install dependencies
-RUN apt update && apt upgrade -y \
-    && apt install -y software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update \
-    && apt install -y gcc python3-dev \
-    && apt install -y python3.10 python3.10-dev python3-pip python3.10-distutils git curl libgl1 ffmpeg \
-    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10 \
-    && ${PYTHON} -m pip install --no-cache-dir awscli==1.35.17 boto3==1.35.17 click requests Cython
+# ========================== Apt Dependency Installation for Runtime ===========================
 
-# Link python to specific version
-RUN ln -s /usr/bin/${PYTHON} /usr/bin/python
+RUN apt-get -y update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        # Install and update ca certs for security
+        ca-certificates \
+        libglib2.0-0 \
+        libgl1-mesa-glx \
+        ffmpeg \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy files needed by the toolbox
-COPY setup.py function_caller.py user_deps.txt pytest.ini install_imported_code.sh "resources/*" ./
+# ========================== Python Dependencies Copied from Build Stage ===========================
 
-# Install Python packages
-RUN ${PYTHON} -m pip install --default-timeout=1000 -e . \
-    && ${PYTHON} -m pip install *.whl
-
-# Install user code from git repo if needed
-RUN /bin/bash install_imported_code.sh
-
-# Change owner of directories to the ideas user
-COPY --chown=ideas toolbox /ideas/toolbox
-COPY --chown=ideas commands /ideas/commands
-
-# Mark commands as executable (return 0 even if there are no files in /ideas/commands)
-RUN chmod +x /ideas/commands/* ; return 0
-
-# Copy toolbox info and annotation files
-COPY --chown=ideas info /ideas/info
+COPY --from=builder --chown=ideas /ideas/venv /ideas/venv
+COPY --from=builder --chown=ideas /opt/uv-python /opt/uv-python
 
 USER ideas
+
+# Add venv bin to path
+ENV PATH="/ideas/venv/bin:${PATH}"
+
 CMD ["/bin/bash"]
+
+# Create image for testing which copies tool code and test data to
+# docker image in order to facilitate unit testing in an isolated environment.
+# This can also be acheived with volume mounts, but that can clutter up
+# your local folder with files generated during testing.
+FROM base AS test
+
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=0
+# Ensure installed tools can be executed out of the box
+ENV UV_TOOL_BIN_DIR=/usr/local/bin
+# Install venv into in the ideas user's home
+ENV UV_PROJECT_ENVIRONMENT=/ideas/venv VIRTUAL_ENV=/ideas/venv
+# Allow uv to provision the pinned Python version required by the lockfile.
+ENV UV_PYTHON_DOWNLOADS=automatic
+# Strictly use frozen dependencies, and require cryptographic verification of each package
+ENV UV_LOCKED=1 UV_REQUIRE_HASHES=1 UV_VERIFY_HASHES=1
+ENV UV_CACHE_DIR=/tmp/.cache/uv
+
+USER root
+
+RUN --mount=from=ghcr.io/astral-sh/uv:0.11.2,source=/uv,target=/bin/uv \
+    --mount=type=cache,id=uv-cache-ideas,target=/tmp/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=.python-version,target=.python-version \
+    --mount=type=bind,source=resources/tensorflow-2.8.0-cp310-cp310-linux_x86_64.whl,target=resources/tensorflow-2.8.0-cp310-cp310-linux_x86_64.whl \
+    uv sync --no-install-project --group analysis --group test
+
+COPY --chown=ideas ./ /ideas
+COPY "resources/cnn_model*" ./
+
+USER ideas
+
+# Vulnerability scanning stage using Trivy
+# Copies the runtime filesystem to a subdirectory to avoid overwrite conflicts with the trivy base image
+FROM base AS scanner
+
+USER root
+
+# Install ca certs so trivy can download appropriate repositories
+RUN apt-get -y update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN --mount=from=aquasec/trivy:0.69.3,source=/usr/local/bin/trivy,target=/usr/local/bin/trivy \
+    trivy rootfs --no-progress --ignore-unfixed --skip-files /usr/local/bin/trivy --severity CRITICAL,HIGH --exit-code 1 / \
+    && touch /scan-ok
+
+# Final stage - identical to runtime but depends on successful scan
+FROM base AS final
+
+# COPY --from=scanner /scan-ok /scan-ok

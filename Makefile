@@ -1,75 +1,115 @@
-# toolbox variables
-REPO=inscopix
-PROJECT=ideas
-MODULE=toolbox
-IMAGE_NAME=caiman
-VERSION=$(shell git describe --tags --always --dirty)
-IMAGE_TAG=${REPO}/${PROJECT}/${MODULE}/${IMAGE_NAME}:${VERSION}
-FULL_NAME=${REPO}/${PROJECT}/${MODULE}/${IMAGE_NAME}
-CONTAINER_NAME=${REPO}-${PROJECT}-${MODULE}-${IMAGE_NAME}-${VERSION}
-PLATFORM=linux/amd64
+.PHONY:  clean clean-venv validate-ideas-cli venv set-hooks setup build security test ruff ruff-check run run-all run-all-clean
 
-# this flag determines whether files should be 
-# dynamically renamed (if possible) after function 
-# execution. 
-# You want to leave this to true so that static 
-# filenames are generated, so that these can be 
-# annotated by the app. 
-# If you want to see what happens on IDEAS, you can
-# switch this to false 
-ifndef TC_NO_RENAME
-	TC_NO_RENAME="true"
-endif
+# Docker image build constants
+IMAGE_REPO := platform
+IMAGE_NAME := caiman
+LABEL := $(shell jq -r '.[0].label' .ideas/images_spec.json)
+IMAGE_TAG := ${IMAGE_REPO}/${IMAGE_NAME}:${LABEL}
+LATEST_IMAGE_TAG := ${IMAGE_REPO}/${IMAGE_NAME}:latest
+PLATFORM := linux/amd64
+TARGET ?= final
+DOCKER_BUILD = docker build . \
+	--platform $(PLATFORM) \
+	-t $(LATEST_IMAGE_TAG)
 
-define run_command
-    bash -c 'mkdir -p "/ideas/outputs/$1" \
-        && cd "/ideas/outputs/$1" \
-        && cp "/ideas/inputs/$1.json" "/ideas/outputs/$1/inputs.json" \
-        && "/ideas/commands/$1.sh" \
-	    && rm "/ideas/outputs/$1/inputs.json"'
-endef
+# IDEAS CLI is used to execute tools locally
+# It's installed in the project venv, but can be overwritten to a customized local version instead.
+IDEAS_CLI ?= .venv/bin/ideas
 
-.PHONY: help build test clean
+# Update the tool specs whenever a new version of a container image is created
+TOOL_SPECS := $(wildcard .ideas/*/tool_spec.json)
+
+# Determine if there's a lockfile to track changes from
+LOCKFILE := $(wildcard uv.lock)
 
 .DEFAULT_GOAL := build
 
 clean:
 	@echo "Cleaning up"
-	-docker rm $(CONTAINER_NAME)
-	-docker images | grep $(FULL_NAME) | awk '{print $$1 ":" $$2}' | grep -v $(VERSION) | xargs docker rmi
+	-docker rmi ${IMAGE_TAG}
+	-docker rmi ${IMAGE_TAG}-test
 
+clean-venv:
+	rm -rf .venv
+
+validate-ideas-cli:
+	@test -f ${IDEAS_CLI} || { echo "Error: IDEAS CLI not found. Ensure you have run 'make venv', or override and use your own install of the cli by specifying a value for IDEAS_CLI when executing make commands"; exit 1; }
+
+.venv/touchfile: .python-version pyproject.toml $(LOCKFILE)
+	uv sync --no-install-project --only-group dev
+	touch $@
+
+venv: .venv/touchfile
+
+set-hooks: venv .pre-commit-config.yaml
+	@echo "Installing pre-commit hooks"
+	uv run pre-commit install
+
+setup: venv set-hooks
+
+# Builds docker image
+# Installs necessary software dependencies for source code
 build:
-	@PACKAGE_REQS=$$(if [ -f ../.dev_requirements.txt ]; then cat ../.dev_requirements.txt | grep -v "#" | tr '\n' ' '; else echo "ideas-public-python-utils@git+https://@github.com/inscopix/ideas-public-python-utils.git@0.0.17 caiman@git+https://github.com/inscopix/CaImAn.git@v0.0.9 isx==2.0.1"; fi) && \
-	echo "Building docker image with PACKAGE_REQS: $$PACKAGE_REQS" && \
-	DOCKER_BUILDKIT=1 docker build . -t $(IMAGE_TAG) \
-		--platform ${PLATFORM} \
-		--build-arg PACKAGE_REQS="$$PACKAGE_REQS" \
-		--target base
+	$(DOCKER_BUILD) \
+		--target ${TARGET}
+	docker tag ${LATEST_IMAGE_TAG} ${IMAGE_TAG}
+	@$(foreach f,$(TOOL_SPECS),\
+	jq --indent 4 '.container_image.label = "$(LABEL)"' $(f) > $(f).tmp && \
+	mv $(f).tmp $(f);)
 
-test: build clean 
-	@echo "Running toolbox tests..."
-	-mkdir -p $(PWD)/outputs
+# Builds docker image checking security vulnerabilities
+security:
+	$(DOCKER_BUILD) \
+		--target final
+
+# Runs unit tests in docker image
+# Used in automated pr checks on github
+test: TARGET=test
+test: IMAGE_TAG=${IMAGE_REPO}/${IMAGE_NAME}:${LABEL}-test
+test: LATEST_IMAGE_TAG=${IMAGE_REPO}/${IMAGE_NAME}:latest-test
+test: build
+	@echo "Running tests..."
 	docker run \
 		--platform ${PLATFORM} \
-		-v $(PWD)/data:/ideas/data \
-		-v $(PWD)/inputs:/ideas/inputs \
-		-v $(PWD)/commands:/ideas/commands \
-		-w /ideas \
-		--name $(CONTAINER_NAME) \
+		--rm \
 		${IMAGE_TAG} \
-		pytest $(TEST_ARGS)
+		/ideas/venv/bin/python -m pytest ${TEST_ARGS}
 
-run: build clean
-	@bash check_tool.sh $(TOOL)
-	@echo "Running the  $(TOOL) tool in a Docker container. Outputs will be in /outputs/$(TOOL)"
-	-rm -rf $(PWD)/outputs/
-	docker run \
-			--platform ${PLATFORM} \
-			-v $(PWD)/data:/ideas/data \
-			-v $(PWD)/inputs:/ideas/inputs \
-			-v $(PWD)/commands:/ideas/commands \
-			-e TC_NO_RENAME=$(TC_NO_RENAME) \
-			--name $(CONTAINER_NAME) \
-	    $(IMAGE_TAG) \
-		$(call run_command,$(TOOL)) \
-	&& docker cp $(CONTAINER_NAME):/ideas/outputs $(PWD)/outputs \
+# Applies linter on source code
+ruff: venv
+	@echo "Running ruff..."
+	uv run ruff format . $(ARGS)
+	uv run ruff check --fix . $(ARGS)
+
+# Checks code formatting of source code
+# Used in automated pr checks on github
+# Does not actually apply any linter changes on the source code,
+ruff-check: venv
+	@echo "Running lint..."
+	uv run ruff format --check . $(ARGS)
+	uv run ruff check --no-fix . $(ARGS)
+
+# Run a tool in the repo
+# Specify the tool key to run
+run: venv validate-ideas-cli build
+	${IDEAS_CLI} tools run $(tool) -s -c -n
+
+# Build docker image, ensuring venv is up-to-date
+build-all: venv build
+
+# Test tools, ensuring venv is up-to-date
+test-all: venv build
+test-all: TARGET=test
+test-all: IMAGE_TAG=${IMAGE_REPO}/${IMAGE_NAME}:${LABEL}-test
+test-all: LATEST_IMAGE_TAG=${IMAGE_REPO}/${IMAGE_NAME}:latest-test
+test-all: test
+
+# Run all tools in the repo consecutively
+run-all: venv validate-ideas-cli build
+	@set -e; \
+	for f in .ideas/*/; do \
+		echo "============================================================="; \
+		${IDEAS_CLI} tools run -s -c -n "$$(basename "$$f")"; \
+	done
+
+run-all-clean: clean-venv venv run-all

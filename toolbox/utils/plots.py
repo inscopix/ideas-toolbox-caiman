@@ -14,10 +14,10 @@ import scipy as sp
 import seaborn as sns
 from beartype import beartype
 from beartype.typing import List, Optional, Union
-from ideas import io, measures, tracking
+from ideas.analysis import io, measures, tracking
 from ideas.exceptions import IdeasError
-from ideas.types import NumpyFloat2DArray
-from ideas.utils import _find_coord_start, get_file_size
+from ideas.analysis.types import NumpyFloat2DArray
+from ideas.analysis.utils import _find_coord_start, get_file_size
 from matplotlib import cm
 from matplotlib.collections import LineCollection
 from mpl_toolkits.axes_grid1 import make_axes_locatable

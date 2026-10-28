@@ -12,7 +12,7 @@ import seaborn as sns
 from beartype import beartype
 from beartype.typing import List, Optional, Tuple, Union
 from caiman.utils import visualization
-from ideas.plots import (
+from ideas.analysis.plots import (
     EventSetPreview,
     save_footprints_preview,
     save_neural_traces_preview,
